@@ -1,28 +1,47 @@
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
 import { useProjectStore } from '../../../core/state/project-store';
 import { useTransportStore } from '../../../core/state/transport-store';
 import { AudioEngine } from '../../../core/audio/audio-engine';
 import { formatPosition } from '../../../core/utils/timing-utils';
 import { downloadMidiJson } from '../../../core/export/midi-json-exporter';
+import { downloadMidi } from '../../../core/export/midi-exporter';
+import { downloadWav } from '../../../core/export/wav-exporter';
 import { Button } from '../../../components/Button';
 import { Modal } from '../../../components/Modal';
 
 interface TransportBarProps {
   onToggleMixer: () => void;
   showMixer: boolean;
+  onToggleEffects?: () => void;
+  showEffects?: boolean;
 }
 
-export function TransportBar({ onToggleMixer, showMixer }: TransportBarProps) {
+export function TransportBar({ onToggleMixer, showMixer, onToggleEffects, showEffects }: TransportBarProps) {
   const project = useProjectStore((s) => s.project);
   const setTempo = useProjectStore((s) => s.setTempo);
   const { isPlaying, currentTick, play, pause, stop, setCurrentTick } = useTransportStore();
   const [showHelp, setShowHelp] = useState(false);
+  const [showExport, setShowExport] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const exportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     AudioEngine.onPosition((tick) => {
       setCurrentTick(tick);
     });
   }, [setCurrentTick]);
+
+  // Close export dropdown on outside click
+  useEffect(() => {
+    if (!showExport) return;
+    const handleClick = (e: MouseEvent) => {
+      if (exportRef.current && !exportRef.current.contains(e.target as Node)) {
+        setShowExport(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [showExport]);
 
   const handlePlay = useCallback(async () => {
     if (!project) return;
@@ -50,14 +69,37 @@ export function TransportBar({ onToggleMixer, showMixer }: TransportBarProps) {
     [setTempo]
   );
 
+  const handleExportJson = useCallback(() => {
+    if (!project) return;
+    downloadMidiJson(project);
+    setShowExport(false);
+  }, [project]);
+
+  const handleExportMidi = useCallback(() => {
+    if (!project) return;
+    downloadMidi(project);
+    setShowExport(false);
+  }, [project]);
+
+  const handleExportWav = useCallback(async () => {
+    if (!project) return;
+    setExporting(true);
+    try {
+      await downloadWav(project);
+    } finally {
+      setExporting(false);
+      setShowExport(false);
+    }
+  }, [project]);
+
   if (!project) return null;
 
   return (
     <>
-      <div className="flex items-center gap-4 px-4 py-2 bg-forge-surface border-b border-forge-border shrink-0 flex-wrap">
+      <div className="flex items-center gap-3 px-4 py-2 bg-forge-surface border-b border-forge-border shrink-0 flex-wrap">
         <div className="flex items-center gap-1">
           <Button size="sm" variant={isPlaying ? 'primary' : 'secondary'} onClick={handlePlay}>
-            {isPlaying ? 'II' : '>'}
+            {isPlaying ? 'II' : '\u25B6'}
           </Button>
           <Button size="sm" variant="secondary" onClick={handleStop}>
             []
@@ -92,9 +134,46 @@ export function TransportBar({ onToggleMixer, showMixer }: TransportBarProps) {
           >
             Mixer
           </Button>
-          <Button size="sm" variant="ghost" onClick={() => downloadMidiJson(project)}>
-            Export
-          </Button>
+          {onToggleEffects && (
+            <Button
+              size="sm"
+              variant={showEffects ? 'primary' : 'ghost'}
+              onClick={onToggleEffects}
+            >
+              FX
+            </Button>
+          )}
+
+          {/* Export dropdown */}
+          <div className="relative" ref={exportRef}>
+            <Button size="sm" variant="ghost" onClick={() => setShowExport(!showExport)}>
+              {exporting ? 'Exporting...' : 'Export'}
+            </Button>
+            {showExport && (
+              <div className="absolute right-0 top-full mt-1 bg-forge-surface border border-forge-border rounded-lg shadow-lg py-1 z-50 min-w-[160px]">
+                <button
+                  onClick={handleExportJson}
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-white/5 transition-colors"
+                >
+                  JSON (Project)
+                </button>
+                <button
+                  onClick={handleExportMidi}
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-white/5 transition-colors"
+                >
+                  MIDI File
+                </button>
+                <button
+                  onClick={handleExportWav}
+                  disabled={exporting}
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-white/5 transition-colors disabled:opacity-50"
+                >
+                  Audio (WebM)
+                </button>
+              </div>
+            )}
+          </div>
+
           <Button size="sm" variant="ghost" onClick={() => setShowHelp(true)}>
             ?
           </Button>
@@ -116,6 +195,12 @@ export function TransportBar({ onToggleMixer, showMixer }: TransportBarProps) {
             <span className="text-forge-muted">Arrow keys</span><span>Navigate grid</span>
             <span className="text-forge-muted">0-9</span><span>Enter fret number</span>
             <span className="text-forge-muted">Delete / Backspace</span><span>Clear cell</span>
+          </div>
+          <h3 className="font-semibold text-forge-accent mt-4">Drum Sequencer</h3>
+          <div className="grid grid-cols-2 gap-y-1 text-xs">
+            <span className="text-forge-muted">Click cell</span><span>Toggle step</span>
+            <span className="text-forge-muted">M button</span><span>Mute track</span>
+            <span className="text-forge-muted">{'|>'} button</span><span>Preview sound</span>
           </div>
         </div>
       </Modal>

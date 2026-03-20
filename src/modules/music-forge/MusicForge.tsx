@@ -6,6 +6,7 @@ import { TrackList } from './components/TrackList';
 import { PianoRoll } from './components/PianoRoll';
 import { TransportBar } from './components/TransportBar';
 import { MixerPanel } from './components/MixerPanel';
+import { EffectsPanel } from './components/EffectsPanel';
 
 export function MusicForge() {
   const navigate = useNavigate();
@@ -13,6 +14,7 @@ export function MusicForge() {
   const selectedTrackId = useUIStore((s) => s.selectedTrackId);
   const setSelectedTrackId = useUIStore((s) => s.setSelectedTrackId);
   const [showMixer, setShowMixer] = useState(false);
+  const [showEffects, setShowEffects] = useState(false);
 
   useEffect(() => {
     if (project && project.tracks.length > 0 && !selectedTrackId) {
@@ -41,7 +43,12 @@ export function MusicForge() {
 
   return (
     <div className="flex flex-col h-full">
-      <TransportBar onToggleMixer={() => setShowMixer(!showMixer)} showMixer={showMixer} />
+      <TransportBar
+        onToggleMixer={() => setShowMixer(!showMixer)}
+        showMixer={showMixer}
+        onToggleEffects={() => setShowEffects(!showEffects)}
+        showEffects={showEffects}
+      />
       {showMixer && <MixerPanel />}
       <div className="flex flex-1 overflow-hidden">
         <TrackList />
@@ -54,6 +61,13 @@ export function MusicForge() {
             </div>
           )}
         </div>
+        {showEffects && selectedTrack && (
+          <EffectsPanel
+            trackId={selectedTrack.id}
+            trackName={selectedTrack.name}
+            onClose={() => setShowEffects(false)}
+          />
+        )}
       </div>
     </div>
   );

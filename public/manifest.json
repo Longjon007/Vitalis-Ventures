@@ -1,0 +1,16 @@
+{
+  "name": "MusicForge + TabForge",
+  "short_name": "MusicForge",
+  "description": "Compose music, write guitar tabs, and build songs in your browser.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f0f1a",
+  "theme_color": "#6c5ce7",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
