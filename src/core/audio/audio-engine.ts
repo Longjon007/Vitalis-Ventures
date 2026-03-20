@@ -2,18 +2,34 @@ import * as Tone from 'tone';
 import { Project } from '../types/project';
 import { ticksToSeconds } from '../utils/timing-utils';
 import { EffectConfig, TrackEffectsChain } from './effects-chain';
+import { getCachedSampler, loadSampler, disposeAllSamplers } from './sampler-engine';
+import { Metronome } from './metronome';
+import type { InstrumentType } from '../types/instrument';
 
 type PositionCallback = (tick: number) => void;
 
 let synths: Map<string, Tone.PolySynth> = new Map();
+let samplerTracks: Set<string> = new Set(); // tracks using samplers instead of synths
 let players: Map<string, Tone.Player> = new Map();
 let effectsChains: Map<string, TrackEffectsChain> = new Map();
 let scheduledEvents: number[] = [];
 let animFrameId: number | null = null;
 let positionCallback: PositionCallback | null = null;
+let useSamplers = true;
 
-function getSynthForTrack(trackId: string, type: string): Tone.PolySynth {
+function getSynthForTrack(trackId: string, type: string): Tone.PolySynth | Tone.Sampler {
   if (synths.has(trackId)) return synths.get(trackId)!;
+
+  // Try cached sampler first for supported instruments
+  if (useSamplers) {
+    const sampler = getCachedSampler(type as InstrumentType);
+    if (sampler) {
+      samplerTracks.add(trackId);
+      // Wrap sampler in synths map for effects chain compatibility
+      // Sampler shares the Tone.Sampler instance across tracks of same type
+      return sampler;
+    }
+  }
 
   // Don't connect to destination yet — effects chain will handle routing
   const synth = new Tone.PolySynth(Tone.Synth);
@@ -70,6 +86,18 @@ export const AudioEngine = {
     Tone.getTransport().loop = false;
   },
 
+  async preloadSamplers(project: Project) {
+    if (!useSamplers) return;
+    const types = new Set(project.tracks.map((t) => t.instrument.type));
+    const promises: Promise<unknown>[] = [];
+    for (const type of types) {
+      if (type === 'piano' || type === 'strings') {
+        promises.push(loadSampler(type));
+      }
+    }
+    await Promise.allSettled(promises);
+  },
+
   scheduleProject(project: Project) {
     this.clearSchedule();
     Tone.getTransport().bpm.value = project.tempo;
@@ -100,8 +128,15 @@ export const AudioEngine = {
         continue;
       }
 
-      const synth = getSynthForTrack(track.id, track.instrument.type);
-      synth.volume.value = Tone.gainToDb(track.volume);
+      const instrument = getSynthForTrack(track.id, track.instrument.type);
+      instrument.volume.value = Tone.gainToDb(track.volume);
+
+      // Ensure instrument is routed to destination if not using effects
+      if (!effectsChains.has(track.id) && !samplerTracks.has(track.id)) {
+        // PolySynth — already routed in getSynthForTrack
+      } else if (samplerTracks.has(track.id)) {
+        instrument.toDestination();
+      }
 
       for (const note of track.notes) {
         const startTime = ticksToSeconds(note.startTick, project.tempo);
@@ -109,7 +144,7 @@ export const AudioEngine = {
         const velocity = note.velocity / 127;
 
         const eventId = Tone.getTransport().schedule((time) => {
-          synth.triggerAttackRelease(
+          instrument.triggerAttackRelease(
             midiToNote(note.pitch),
             duration,
             time,
@@ -172,6 +207,7 @@ export const AudioEngine = {
   stop() {
     Tone.getTransport().stop();
     Tone.getTransport().position = 0;
+    Metronome.stop();
     this.stopPositionTracking();
   },
 
@@ -210,6 +246,7 @@ export const AudioEngine = {
   dispose() {
     this.stop();
     this.clearSchedule();
+    Metronome.dispose();
     for (const chain of effectsChains.values()) {
       chain.dispose();
     }
@@ -218,6 +255,8 @@ export const AudioEngine = {
       synth.dispose();
     }
     synths.clear();
+    samplerTracks.clear();
+    disposeAllSamplers();
     for (const player of players.values()) {
       player.dispose();
     }

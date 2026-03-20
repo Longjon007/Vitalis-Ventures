@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAiStore } from '../../core/state/ai-store';
 import { useProjectStore } from '../../core/state/project-store';
 import { useSubscriptionStore } from '../../core/state/subscription-store';
-import { GenerationMode, StemType, GenerationResult } from '../../core/ai/ai-types';
+import { GenerationMode, StemType, AiModel, GenerationResult } from '../../core/ai/ai-types';
 import { estimateCost } from '../../core/ai/ai-engine';
 import { PromptInput } from './components/PromptInput';
 import { GenerationPreview } from './components/GenerationPreview';
@@ -40,6 +40,7 @@ export function AiForge() {
       duration: number;
       stemType?: StemType;
       separateStems: boolean;
+      model?: AiModel;
     }) => {
       // Check generation limits
       if (features.aiGenerationsPerMonth !== Infinity && generationsUsed >= features.aiGenerationsPerMonth) {
@@ -55,6 +56,7 @@ export function AiForge() {
           tempo: project?.tempo,
           key: project?.key,
           stemType: options.stemType,
+          model: options.model,
         },
         options.separateStems
       );
