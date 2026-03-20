@@ -1,65 +1,68 @@
-export interface HistoryState {
-  _history: { past: string[]; future: string[] };
-  undo: () => void;
-  redo: () => void;
+import { create } from 'zustand';
+import { Project } from '../types/project';
+
+const MAX_HISTORY = 30;
+
+interface HistoryStore {
+  past: string[];
+  future: string[];
+  pushSnapshot: (project: Project) => void;
+  undo: () => Project | null;
+  redo: () => Project | null;
   canUndo: () => boolean;
   canRedo: () => boolean;
+  clear: () => void;
 }
 
-const MAX_HISTORY = 50;
+export const useHistoryStore = create<HistoryStore>((set, get) => ({
+  past: [],
+  future: [],
 
-export function createHistoryActions(
-  set: (partial: Record<string, unknown>) => void,
-  get: () => Record<string, unknown> & HistoryState
-): HistoryState {
-  return {
-    _history: { past: [], future: [] },
-    undo: () => {
-      const state = get();
-      if (state._history.past.length === 0) return;
-      const past = [...state._history.past];
-      const previous = past.pop()!;
-      const parsed = JSON.parse(previous) as Record<string, unknown>;
-      const currentSnapshot: Record<string, unknown> = {};
-      for (const key of Object.keys(parsed)) {
-        currentSnapshot[key] = state[key];
-      }
-      const future = [JSON.stringify(currentSnapshot), ...state._history.future];
-      set({ ...parsed, _history: { past, future } });
-    },
-    redo: () => {
-      const state = get();
-      if (state._history.future.length === 0) return;
-      const future = [...state._history.future];
-      const next = future.shift()!;
-      const parsed = JSON.parse(next) as Record<string, unknown>;
-      const currentSnapshot: Record<string, unknown> = {};
-      for (const key of Object.keys(parsed)) {
-        currentSnapshot[key] = state[key];
-      }
-      const past = [...state._history.past, JSON.stringify(currentSnapshot)];
-      set({ ...parsed, _history: { past, future } });
-    },
-    canUndo: () => {
-      return get()._history.past.length > 0;
-    },
-    canRedo: () => {
-      return get()._history.future.length > 0;
-    },
-  };
-}
+  pushSnapshot: (project: Project) => {
+    const snapshot = JSON.stringify(project);
+    set((state) => ({
+      past: [...state.past, snapshot].slice(-MAX_HISTORY),
+      future: [],
+    }));
+  },
 
-export function pushHistorySnapshot(
-  set: (partial: Record<string, unknown>) => void,
-  get: () => Record<string, unknown> & HistoryState,
-  trackedKeys: string[]
-) {
-  const state = get();
-  const tracked: Record<string, unknown> = {};
-  for (const key of trackedKeys) {
-    tracked[key] = state[key];
+  undo: () => {
+    const { past } = get();
+    if (past.length === 0) return null;
+    const newPast = [...past];
+    const snapshot = newPast.pop()!;
+    const project = JSON.parse(snapshot) as Project;
+
+    // Current state will be pushed to future by the caller
+    set({ past: newPast });
+    return project;
+  },
+
+  redo: () => {
+    const { future } = get();
+    if (future.length === 0) return null;
+    const newFuture = [...future];
+    const snapshot = newFuture.shift()!;
+    const project = JSON.parse(snapshot) as Project;
+
+    set({ future: newFuture });
+    return project;
+  },
+
+  canUndo: () => get().past.length > 0,
+  canRedo: () => get().future.length > 0,
+
+  clear: () => set({ past: [], future: [] }),
+}));
+
+/**
+ * Push current project to undo stack before a mutation.
+ * Call this before any note/track-modifying action.
+ */
+export async function snapshotBeforeMutation() {
+  const { useProjectStore } = await import('./project-store');
+  const project = useProjectStore.getState().project;
+  if (project) {
+    useHistoryStore.getState().pushSnapshot(project);
   }
-  const snapshot = JSON.stringify(tracked);
-  const past = [...state._history.past, snapshot].slice(-MAX_HISTORY);
-  set({ _history: { past, future: [] } });
 }

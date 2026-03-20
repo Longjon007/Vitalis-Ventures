@@ -3,6 +3,7 @@ import { v4 as uuid } from 'uuid';
 import { Track, NoteEvent } from '../../../core/types/project';
 import { useProjectStore } from '../../../core/state/project-store';
 import { useTransportStore } from '../../../core/state/transport-store';
+import { useHistoryStore } from '../../../core/state/history-middleware';
 import { midiToNoteName, isBlackKey } from '../../../core/utils/note-utils';
 import { TICKS_PER_BEAT } from '../../../core/types/music';
 import { getScaleNotes, isInScale } from '../../../core/types/scales';
@@ -162,7 +163,10 @@ export function PianoRoll({ track }: PianoRollProps) {
       if (clickedNote) {
         setSelectedNoteId(clickedNote.id);
       } else {
-        // Create new note
+        // Snapshot for undo before creating note
+        const proj = useProjectStore.getState().project;
+        if (proj) useHistoryStore.getState().pushSnapshot(proj);
+
         const newNote: NoteEvent = {
           id: uuid(),
           pitch: clickedPitch,
@@ -181,6 +185,8 @@ export function PianoRoll({ track }: PianoRollProps) {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!selectedNoteId) return;
       if (e.key === 'Delete' || e.key === 'Backspace') {
+        const proj = useProjectStore.getState().project;
+        if (proj) useHistoryStore.getState().pushSnapshot(proj);
         removeNote(track.id, selectedNoteId);
         setSelectedNoteId(null);
       }
@@ -239,6 +245,26 @@ export function PianoRoll({ track }: PianoRollProps) {
           <span className="w-1 h-1 rounded-full bg-forge-accent mr-1 shrink-0" />
         )}
         {p % 12 === 0 ? midiToNoteName(p) : ''}
+      </div>
+    );
+  }
+
+  // Audio tracks show a placeholder instead of the piano roll
+  if (track.audioUrl) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center max-w-md">
+          <div className="w-16 h-16 rounded-full bg-forge-accent/10 flex items-center justify-center mx-auto mb-4">
+            <span className="text-2xl text-forge-accent">*</span>
+          </div>
+          <h3 className="text-lg font-semibold mb-2">AI Audio Track</h3>
+          <p className="text-sm text-forge-muted mb-4">
+            This track contains AI-generated audio. It will play alongside your other tracks during playback.
+          </p>
+          <div className="bg-forge-surface border border-forge-border rounded-lg p-3 inline-block">
+            <audio controls src={track.audioUrl} className="w-64" />
+          </div>
+        </div>
       </div>
     );
   }

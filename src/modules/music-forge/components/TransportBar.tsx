@@ -4,6 +4,7 @@ import { useProjectStore } from '../../../core/state/project-store';
 import { useTransportStore } from '../../../core/state/transport-store';
 import { useSubscriptionStore } from '../../../core/state/subscription-store';
 import { AudioEngine } from '../../../core/audio/audio-engine';
+import { useHistoryStore } from '../../../core/state/history-middleware';
 import { formatPosition } from '../../../core/utils/timing-utils';
 import { downloadMidiJson } from '../../../core/export/midi-json-exporter';
 import { downloadMidi } from '../../../core/export/midi-exporter';
@@ -101,6 +102,33 @@ export function TransportBar({ onToggleMixer, showMixer, onToggleEffects, showEf
   const canWav = canAccess('wavExport');
   const canEffects = canAccess('effectsChain');
 
+  const canUndoVal = useHistoryStore((s) => s.past.length > 0);
+  const canRedoVal = useHistoryStore((s) => s.future.length > 0);
+
+  const handleUndo = useCallback(() => {
+    const currentProject = useProjectStore.getState().project;
+    const restored = useHistoryStore.getState().undo();
+    if (restored && currentProject) {
+      // Push current to future
+      useHistoryStore.setState((s) => ({
+        future: [JSON.stringify(currentProject), ...s.future],
+      }));
+      useProjectStore.setState({ project: restored });
+    }
+  }, []);
+
+  const handleRedo = useCallback(() => {
+    const currentProject = useProjectStore.getState().project;
+    const restored = useHistoryStore.getState().redo();
+    if (restored && currentProject) {
+      // Push current to past
+      useHistoryStore.setState((s) => ({
+        past: [...s.past, JSON.stringify(currentProject)],
+      }));
+      useProjectStore.setState({ project: restored });
+    }
+  }, []);
+
   return (
     <>
       <div className="flex items-center gap-3 px-4 py-2 bg-forge-surface border-b border-forge-border shrink-0 flex-wrap">
@@ -110,6 +138,12 @@ export function TransportBar({ onToggleMixer, showMixer, onToggleEffects, showEf
           </Button>
           <Button size="sm" variant="secondary" onClick={handleStop}>
             []
+          </Button>
+          <Button size="sm" variant="ghost" onClick={handleUndo} disabled={!canUndoVal} title="Undo">
+            {'<'}
+          </Button>
+          <Button size="sm" variant="ghost" onClick={handleRedo} disabled={!canRedoVal} title="Redo">
+            {'>'}
           </Button>
         </div>
 

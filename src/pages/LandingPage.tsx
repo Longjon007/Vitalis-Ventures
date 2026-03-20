@@ -26,6 +26,14 @@ const FEATURES = [
     color: '#e17055',
     highlights: ['9 drum sounds', '16-step grid', 'Preset patterns', 'Per-track controls'],
   },
+  {
+    title: 'ForgeAI',
+    description:
+      'AI-powered music generation engine. Describe the music you want and get full tracks, stems, or instrumentals imported directly into your project.',
+    icon: '*',
+    color: '#d4a853',
+    highlights: ['Text-to-music generation', 'Stem separation', 'Multi-track import', 'Style control'],
+  },
 ];
 
 const STEPS = [
@@ -83,6 +91,9 @@ export function LandingPage() {
           <Button variant="ghost" size="sm" onClick={() => navigate('/tab')}>
             TabForge
           </Button>
+          <Button variant="ghost" size="sm" onClick={() => navigate('/ai')}>
+            ForgeAI
+          </Button>
           <Button variant="ghost" size="sm" onClick={() => navigate('/pricing')}>
             Pricing
           </Button>
@@ -107,8 +118,8 @@ export function LandingPage() {
           </h1>
 
           <p className="text-lg sm:text-xl text-forge-muted max-w-2xl mx-auto mb-10 leading-relaxed">
-            A complete music workstation in your browser. Multi-track composition with MusicForge,
-            guitar tablature with TabForge, drum sequencing, effects processing, and MIDI export.
+            A complete music workstation in your browser. Multi-track composition, guitar tablature,
+            drum sequencing, AI-powered music generation, effects processing, and MIDI export.
           </p>
 
           <div className="flex items-center justify-center gap-4">
@@ -127,11 +138,11 @@ export function LandingPage() {
         <div className="text-center mb-14">
           <h2 className="text-3xl sm:text-4xl font-bold mb-3">Everything You Need</h2>
           <p className="text-forge-muted text-lg max-w-xl mx-auto">
-            Three powerful tools, one seamless workflow.
+            Four powerful tools, one seamless workflow.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {FEATURES.map((feature) => (
             <div
               key={feature.title}
@@ -218,6 +229,9 @@ export function LandingPage() {
             </button>
             <button onClick={() => navigate('/drums')} className="hover:text-forge-text transition-colors">
               Drums
+            </button>
+            <button onClick={() => navigate('/ai')} className="hover:text-forge-text transition-colors">
+              ForgeAI
             </button>
             <button onClick={() => navigate('/store')} className="hover:text-forge-text transition-colors">
               Store

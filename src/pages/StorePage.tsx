@@ -6,7 +6,7 @@ interface StoreItem {
   id: string;
   name: string;
   description: string;
-  category: 'sound-pack' | 'template' | 'preset';
+  category: 'sound-pack' | 'template' | 'preset' | 'ai-pack';
   price: string;
   tags: string[];
 }
@@ -76,6 +76,38 @@ const STORE_ITEMS: StoreItem[] = [
     price: 'Pro',
     tags: ['metal', 'rock', 'heavy'],
   },
+  {
+    id: 'ai-cinematic',
+    name: 'AI Cinematic Prompts',
+    description: 'Curated prompt collection for generating epic orchestral, trailer, and cinematic music with ForgeAI.',
+    category: 'ai-pack',
+    price: 'Pro',
+    tags: ['ai', 'cinematic', 'orchestral'],
+  },
+  {
+    id: 'ai-lofi-beats',
+    name: 'AI Lo-Fi Generator Pack',
+    description: 'Optimized prompts and settings for generating chill lo-fi beats, jazzy loops, and ambient textures.',
+    category: 'ai-pack',
+    price: 'Pro',
+    tags: ['ai', 'lo-fi', 'chill'],
+  },
+  {
+    id: 'ai-edm-pack',
+    name: 'AI EDM Production Pack',
+    description: 'Generate hard-hitting drops, buildups, and electronic dance tracks with stem separation included.',
+    category: 'ai-pack',
+    price: 'Studio',
+    tags: ['ai', 'edm', 'electronic'],
+  },
+  {
+    id: 'ai-songwriting',
+    name: 'AI Songwriting Assistant',
+    description: 'Guided prompt templates for full songs with lyrics, verse-chorus structure, and vocal generation.',
+    category: 'ai-pack',
+    price: 'Studio',
+    tags: ['ai', 'vocals', 'songwriting'],
+  },
 ];
 
 const CATEGORIES = [
@@ -83,6 +115,7 @@ const CATEGORIES = [
   { key: 'sound-pack', label: 'Sound Packs' },
   { key: 'template', label: 'Templates' },
   { key: 'preset', label: 'Presets' },
+  { key: 'ai-pack', label: 'AI Packs' },
 ];
 
 export function StorePage() {
@@ -157,6 +190,8 @@ export function StorePage() {
                           ? 'bg-purple-500/20 text-purple-400'
                           : item.category === 'template'
                           ? 'bg-blue-500/20 text-blue-400'
+                          : item.category === 'ai-pack'
+                          ? 'bg-yellow-500/20 text-yellow-400'
                           : 'bg-green-500/20 text-green-400'
                       }`}
                     >
