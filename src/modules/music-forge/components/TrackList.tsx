@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { useProjectStore } from '../../../core/state/project-store';
 import { useUIStore } from '../../../core/state/ui-store';
 import { useSubscriptionStore } from '../../../core/state/subscription-store';
@@ -5,6 +6,7 @@ import { INSTRUMENTS } from '../../../core/types/instrument';
 import { Button } from '../../../components/Button';
 
 export function TrackList() {
+  const navigate = useNavigate();
   const project = useProjectStore((s) => s.project);
   const updateTrack = useProjectStore((s) => s.updateTrack);
   const addTrack = useProjectStore((s) => s.addTrack);
@@ -12,6 +14,7 @@ export function TrackList() {
   const selectedTrackId = useUIStore((s) => s.selectedTrackId);
   const setSelectedTrackId = useUIStore((s) => s.setSelectedTrackId);
   const features = useSubscriptionStore((s) => s.features);
+  const canAi = useSubscriptionStore((s) => s.canAccess('aiGeneration'));
 
   if (!project) return null;
 
@@ -21,15 +24,27 @@ export function TrackList() {
     <div className="w-52 bg-forge-surface border-r border-forge-border flex flex-col shrink-0">
       <div className="p-3 border-b border-forge-border flex items-center justify-between">
         <span className="text-xs font-semibold text-forge-muted uppercase tracking-wider">Tracks</span>
-        <Button
-          size="sm"
-          variant="ghost"
-          disabled={atTrackLimit}
-          title={atTrackLimit ? `Max ${features.maxTracksPerProject} tracks on your plan` : 'Add track'}
-          onClick={() => addTrack(`Track ${project.tracks.length + 1}`, INSTRUMENTS.synth)}
-        >
-          +
-        </Button>
+        <div className="flex items-center gap-1">
+          {canAi && (
+            <Button
+              size="sm"
+              variant="ghost"
+              title="Generate with AI"
+              onClick={() => navigate('/ai')}
+            >
+              AI
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={atTrackLimit}
+            title={atTrackLimit ? `Max ${features.maxTracksPerProject} tracks on your plan` : 'Add track'}
+            onClick={() => addTrack(`Track ${project.tracks.length + 1}`, INSTRUMENTS.synth)}
+          >
+            +
+          </Button>
+        </div>
       </div>
 
       {atTrackLimit && features.maxTracksPerProject < Infinity && (
@@ -105,7 +120,7 @@ export function TrackList() {
               </div>
 
               <p className="text-xs text-forge-muted mt-1">
-                {track.instrument.name} | {track.notes.length} notes
+                {track.instrument.name} | {track.audioUrl ? 'AI Audio' : `${track.notes.length} notes`}
               </p>
             </div>
           );

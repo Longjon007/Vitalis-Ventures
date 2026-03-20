@@ -16,6 +16,10 @@ export interface FeatureGate {
   collaboration: boolean;
   aiSuggestions: boolean;
   soundPacks: boolean;
+  aiGeneration: boolean;
+  aiGenerationsPerMonth: number;
+  aiMaxDuration: number;        // seconds
+  aiStemSeparation: boolean;
 }
 
 const TIER_FEATURES: Record<SubscriptionTier, FeatureGate> = {
@@ -32,6 +36,10 @@ const TIER_FEATURES: Record<SubscriptionTier, FeatureGate> = {
     collaboration: false,
     aiSuggestions: false,
     soundPacks: false,
+    aiGeneration: true,
+    aiGenerationsPerMonth: 3,
+    aiMaxDuration: 15,
+    aiStemSeparation: false,
   },
   pro: {
     maxProjects: Infinity,
@@ -46,6 +54,10 @@ const TIER_FEATURES: Record<SubscriptionTier, FeatureGate> = {
     collaboration: false,
     aiSuggestions: false,
     soundPacks: true,
+    aiGeneration: true,
+    aiGenerationsPerMonth: 50,
+    aiMaxDuration: 120,
+    aiStemSeparation: true,
   },
   studio: {
     maxProjects: Infinity,
@@ -60,6 +72,10 @@ const TIER_FEATURES: Record<SubscriptionTier, FeatureGate> = {
     collaboration: true,
     aiSuggestions: true,
     soundPacks: true,
+    aiGeneration: true,
+    aiGenerationsPerMonth: Infinity,
+    aiMaxDuration: 300,
+    aiStemSeparation: true,
   },
 };
 

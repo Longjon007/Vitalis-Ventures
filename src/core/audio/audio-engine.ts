@@ -6,6 +6,7 @@ import { EffectConfig, TrackEffectsChain } from './effects-chain';
 type PositionCallback = (tick: number) => void;
 
 let synths: Map<string, Tone.PolySynth> = new Map();
+let players: Map<string, Tone.Player> = new Map();
 let effectsChains: Map<string, TrackEffectsChain> = new Map();
 let scheduledEvents: number[] = [];
 let animFrameId: number | null = null;
@@ -67,6 +68,26 @@ export const AudioEngine = {
     for (const track of project.tracks) {
       if (track.muted) continue;
       if (hasSolo && !track.solo) continue;
+
+      // Audio tracks (AI-generated) use Tone.Player
+      if (track.audioUrl) {
+        const existingPlayer = players.get(track.id);
+        if (existingPlayer) {
+          existingPlayer.dispose();
+          players.delete(track.id);
+        }
+        try {
+          const player = new Tone.Player({
+            url: track.audioUrl,
+            volume: Tone.gainToDb(track.volume),
+          }).toDestination();
+          player.sync().start(0);
+          players.set(track.id, player);
+        } catch {
+          // Audio URL may be expired/unavailable — skip
+        }
+        continue;
+      }
 
       const synth = getSynthForTrack(track.id, track.instrument.type);
       synth.volume.value = Tone.gainToDb(track.volume);
@@ -186,5 +207,9 @@ export const AudioEngine = {
       synth.dispose();
     }
     synths.clear();
+    for (const player of players.values()) {
+      player.dispose();
+    }
+    players.clear();
   },
 };

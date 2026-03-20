@@ -14,6 +14,7 @@ const DrumSequencer = lazy(() => import('./modules/drum-sequencer/DrumSequencer'
 const ProjectsPage = lazy(() => import('./pages/ProjectsPage').then((m) => ({ default: m.ProjectsPage })));
 const PricingPage = lazy(() => import('./pages/PricingPage').then((m) => ({ default: m.PricingPage })));
 const StorePage = lazy(() => import('./pages/StorePage').then((m) => ({ default: m.StorePage })));
+const AiForge = lazy(() => import('./modules/ai-forge/AiForge').then((m) => ({ default: m.AiForge })));
 
 function LoadingFallback() {
   return (
@@ -51,6 +52,7 @@ function AppRoutes() {
         <Route path="/music" element={<MusicForge />} />
         <Route path="/tab" element={<TabForge />} />
         <Route path="/drums" element={<DrumSequencer />} />
+        <Route path="/ai" element={<AiForge />} />
         <Route path="/projects" element={<ProjectsPage />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/store" element={<StorePage />} />

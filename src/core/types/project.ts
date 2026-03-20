@@ -18,6 +18,7 @@ export interface Track {
   pan: number;     // -1 to 1
   muted: boolean;
   solo: boolean;
+  audioUrl?: string; // AI-generated audio track URL
 }
 
 export interface Project {

@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { path: '/music', label: 'MusicForge', icon: 'M' },
   { path: '/tab', label: 'TabForge', icon: 'T' },
   { path: '/drums', label: 'Drums', icon: 'D' },
+  { path: '/ai', label: 'ForgeAI', icon: '*' },
   { path: '/projects', label: 'Projects', icon: 'P' },
 ];
 

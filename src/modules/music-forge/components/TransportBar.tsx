@@ -1,4 +1,5 @@
 import { useEffect, useCallback, useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useProjectStore } from '../../../core/state/project-store';
 import { useTransportStore } from '../../../core/state/transport-store';
 import { useSubscriptionStore } from '../../../core/state/subscription-store';
@@ -18,6 +19,7 @@ interface TransportBarProps {
 }
 
 export function TransportBar({ onToggleMixer, showMixer, onToggleEffects, showEffects }: TransportBarProps) {
+  const navigate = useNavigate();
   const project = useProjectStore((s) => s.project);
   const setTempo = useProjectStore((s) => s.setTempo);
   const { isPlaying, currentTick, play, pause, stop, setCurrentTick } = useTransportStore();
@@ -150,6 +152,14 @@ export function TransportBar({ onToggleMixer, showMixer, onToggleEffects, showEf
               FX
             </Button>
           )}
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => navigate('/ai')}
+            title="AI Music Generation"
+          >
+            AI
+          </Button>
 
           {/* Export dropdown */}
           <div className="relative" ref={exportRef}>
