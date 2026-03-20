@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { v4 as uuid } from 'uuid';
 import { useProjectsStore } from '../core/state/projects-store';
 import { useProjectStore } from '../core/state/project-store';
+import { Project } from '../core/types/project';
 import { Button } from '../components/Button';
 import { Modal } from '../components/Modal';
 
@@ -14,6 +16,8 @@ export function ProjectsPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [dupName, setDupName] = useState('');
   const [dupId, setDupId] = useState<string | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadProjectList();
@@ -49,16 +53,74 @@ export function ProjectsPage() {
     }
   };
 
+  const handleExport = useCallback(async (projectId: string) => {
+    const project = await loadProject(projectId);
+    if (!project) return;
+    const json = JSON.stringify(project, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${project.name.replace(/\s+/g, '_')}.vv.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [loadProject]);
+
+  const handleImportFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImportError(null);
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      // Validate basic project structure
+      if (!data.name || !data.tracks || !Array.isArray(data.tracks) || !data.tempo) {
+        throw new Error('Invalid project file format');
+      }
+      const imported: Project = {
+        ...data,
+        id: uuid(), // Always assign a new ID to avoid conflicts
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+      await saveProject(imported);
+      await loadProjectList();
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : 'Failed to import project');
+    }
+    // Reset input so the same file can be re-imported
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }, [saveProject, loadProjectList]);
+
   return (
     <div className="flex flex-col h-full">
       <div className="px-6 py-4 border-b border-forge-border bg-forge-surface shrink-0">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">My Projects</h2>
-          <Button size="sm" variant="primary" onClick={() => navigate('/builder')}>
-            New Project
-          </Button>
+          <div className="flex items-center gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json,.vv.json"
+              onChange={handleImportFile}
+              className="hidden"
+            />
+            <Button size="sm" variant="ghost" onClick={() => fileInputRef.current?.click()}>
+              Import
+            </Button>
+            <Button size="sm" variant="primary" onClick={() => navigate('/builder')}>
+              New Project
+            </Button>
+          </div>
         </div>
       </div>
+
+      {importError && (
+        <div className="mx-6 mt-3 p-2 bg-forge-danger/10 border border-forge-danger/30 rounded text-sm text-forge-danger flex items-center justify-between">
+          <span>{importError}</span>
+          <button onClick={() => setImportError(null)} className="text-forge-danger hover:underline text-xs ml-2">Dismiss</button>
+        </div>
+      )}
 
       <div className="flex-1 overflow-auto p-6">
         {loading ? (
@@ -97,7 +159,7 @@ export function ProjectsPage() {
                 <p className="text-[10px] text-forge-muted mb-3">
                   Updated {new Date(p.updatedAt).toLocaleDateString()}
                 </p>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   <Button size="sm" variant="primary" onClick={() => handleLoad(p.id)}>
                     Open
                   </Button>
@@ -110,6 +172,9 @@ export function ProjectsPage() {
                     }}
                   >
                     Duplicate
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => handleExport(p.id)}>
+                    Export
                   </Button>
                   <Button size="sm" variant="ghost" onClick={() => setDeleteId(p.id)}>
                     Delete

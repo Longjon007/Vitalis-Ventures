@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { v4 as uuid } from 'uuid';
 import { useProjectStore } from '../../../core/state/project-store';
@@ -17,6 +17,28 @@ export function TrackList() {
   const setSelectedTrackId = useUIStore((s) => s.setSelectedTrackId);
   const features = useSubscriptionStore((s) => s.features);
   const canAi = useSubscriptionStore((s) => s.canAccess('aiGeneration'));
+  const [renamingTrackId, setRenamingTrackId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+  const renameInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (renamingTrackId && renameInputRef.current) {
+      renameInputRef.current.focus();
+      renameInputRef.current.select();
+    }
+  }, [renamingTrackId]);
+
+  const startRename = useCallback((trackId: string, currentName: string) => {
+    setRenamingTrackId(trackId);
+    setRenameValue(currentName);
+  }, []);
+
+  const commitRename = useCallback(() => {
+    if (renamingTrackId && renameValue.trim()) {
+      updateTrack(renamingTrackId, { name: renameValue.trim() });
+    }
+    setRenamingTrackId(null);
+  }, [renamingTrackId, renameValue, updateTrack]);
 
   const duplicateTrack = useCallback(
     (trackId: string) => {
@@ -117,7 +139,31 @@ export function TrackList() {
                   className="w-2.5 h-2.5 rounded-full shrink-0"
                   style={{ backgroundColor: track.instrument.color }}
                 />
-                <span className="text-sm font-medium truncate flex-1">{track.name}</span>
+                {renamingTrackId === track.id ? (
+                  <input
+                    ref={renameInputRef}
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    onBlur={commitRename}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') commitRename();
+                      if (e.key === 'Escape') setRenamingTrackId(null);
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="text-sm font-medium flex-1 bg-forge-bg border border-forge-accent rounded px-1 py-0 outline-none min-w-0"
+                  />
+                ) : (
+                  <span
+                    className="text-sm font-medium truncate flex-1 cursor-text"
+                    onDoubleClick={(e) => {
+                      e.stopPropagation();
+                      startRename(track.id, track.name);
+                    }}
+                    title="Double-click to rename"
+                  >
+                    {track.name}
+                  </span>
+                )}
                 <div className="flex items-center gap-0.5 shrink-0">
                   {/* Reorder buttons */}
                   <button
