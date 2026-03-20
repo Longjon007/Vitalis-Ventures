@@ -1,0 +1,149 @@
+import * as Tone from 'tone';
+import { Project } from '../types/project';
+import { ticksToSeconds } from '../utils/timing-utils';
+
+type PositionCallback = (tick: number) => void;
+
+let synths: Map<string, Tone.PolySynth> = new Map();
+let scheduledEvents: number[] = [];
+let animFrameId: number | null = null;
+let positionCallback: PositionCallback | null = null;
+
+function getSynthForTrack(trackId: string, type: string): Tone.PolySynth {
+  if (synths.has(trackId)) return synths.get(trackId)!;
+
+  const synth = new Tone.PolySynth(Tone.Synth).toDestination();
+
+  switch (type) {
+    case 'piano':
+      synth.set({ oscillator: { type: 'triangle' }, envelope: { attack: 0.01, decay: 0.3, sustain: 0.3, release: 0.8 } });
+      break;
+    case 'guitar':
+      synth.set({ oscillator: { type: 'sawtooth' }, envelope: { attack: 0.005, decay: 0.2, sustain: 0.1, release: 0.5 } });
+      break;
+    case 'bass':
+      synth.set({ oscillator: { type: 'sine' }, envelope: { attack: 0.01, decay: 0.1, sustain: 0.6, release: 0.3 } });
+      break;
+    case 'strings':
+      synth.set({ oscillator: { type: 'sawtooth' }, envelope: { attack: 0.3, decay: 0.1, sustain: 0.8, release: 1.0 } });
+      break;
+    case 'pad':
+      synth.set({ oscillator: { type: 'sine' }, envelope: { attack: 0.5, decay: 0.2, sustain: 0.7, release: 1.5 } });
+      break;
+    case 'drums':
+      synth.set({ oscillator: { type: 'triangle' }, envelope: { attack: 0.001, decay: 0.15, sustain: 0, release: 0.1 } });
+      break;
+    default:
+      synth.set({ oscillator: { type: 'square' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.4, release: 0.5 } });
+  }
+
+  synths.set(trackId, synth);
+  return synth;
+}
+
+function midiToNote(midi: number): string {
+  const names = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+  const octave = Math.floor(midi / 12) - 1;
+  return `${names[midi % 12]}${octave}`;
+}
+
+export const AudioEngine = {
+  async init() {
+    await Tone.start();
+  },
+
+  scheduleProject(project: Project) {
+    this.clearSchedule();
+    Tone.getTransport().bpm.value = project.tempo;
+
+    const hasSolo = project.tracks.some((t) => t.solo);
+
+    for (const track of project.tracks) {
+      if (track.muted) continue;
+      if (hasSolo && !track.solo) continue;
+
+      const synth = getSynthForTrack(track.id, track.instrument.type);
+      synth.volume.value = Tone.gainToDb(track.volume);
+
+      for (const note of track.notes) {
+        const startTime = ticksToSeconds(note.startTick, project.tempo);
+        const duration = ticksToSeconds(note.durationTicks, project.tempo);
+        const velocity = note.velocity / 127;
+
+        const eventId = Tone.getTransport().schedule((time) => {
+          synth.triggerAttackRelease(
+            midiToNote(note.pitch),
+            duration,
+            time,
+            velocity
+          );
+        }, startTime);
+        scheduledEvents.push(eventId);
+      }
+    }
+  },
+
+  clearSchedule() {
+    for (const id of scheduledEvents) {
+      Tone.getTransport().clear(id);
+    }
+    scheduledEvents = [];
+  },
+
+  play() {
+    Tone.getTransport().start();
+    this.startPositionTracking();
+  },
+
+  pause() {
+    Tone.getTransport().pause();
+    this.stopPositionTracking();
+  },
+
+  stop() {
+    Tone.getTransport().stop();
+    Tone.getTransport().position = 0;
+    this.stopPositionTracking();
+  },
+
+  seekTo(seconds: number) {
+    Tone.getTransport().seconds = seconds;
+  },
+
+  setTempo(bpm: number) {
+    Tone.getTransport().bpm.value = bpm;
+  },
+
+  onPosition(callback: PositionCallback) {
+    positionCallback = callback;
+  },
+
+  startPositionTracking() {
+    const tick = () => {
+      if (positionCallback) {
+        const seconds = Tone.getTransport().seconds;
+        const bpm = Tone.getTransport().bpm.value;
+        const ticksPerSecond = (bpm / 60) * 480;
+        positionCallback(Math.round(seconds * ticksPerSecond));
+      }
+      animFrameId = requestAnimationFrame(tick);
+    };
+    tick();
+  },
+
+  stopPositionTracking() {
+    if (animFrameId !== null) {
+      cancelAnimationFrame(animFrameId);
+      animFrameId = null;
+    }
+  },
+
+  dispose() {
+    this.stop();
+    this.clearSchedule();
+    for (const synth of synths.values()) {
+      synth.dispose();
+    }
+    synths.clear();
+  },
+};
