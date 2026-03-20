@@ -1,5 +1,9 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useSubscriptionStore } from '../core/state/subscription-store';
+import { useStoreItemsStore } from '../core/state/store-items-store';
+import { useProjectStore } from '../core/state/project-store';
+import { INSTRUMENTS } from '../core/types/instrument';
 import { Button } from '../components/Button';
 
 interface StoreItem {
@@ -110,6 +114,43 @@ const STORE_ITEMS: StoreItem[] = [
   },
 ];
 
+// Template definitions - what tracks to create when a template is installed/applied
+const TEMPLATE_CONFIGS: Record<string, { tracks: { name: string; instrument: string }[]; tempo: number; key: string }> = {
+  'tp-jazz': {
+    tracks: [
+      { name: 'Piano', instrument: 'piano' },
+      { name: 'Upright Bass', instrument: 'bass' },
+      { name: 'Drums', instrument: 'drums' },
+      { name: 'Sax', instrument: 'synth' },
+      { name: 'Trumpet', instrument: 'synth' },
+    ],
+    tempo: 130,
+    key: 'Bb',
+  },
+  'tp-ambient': {
+    tracks: [
+      { name: 'Pad Layer 1', instrument: 'pad' },
+      { name: 'Pad Layer 2', instrument: 'pad' },
+      { name: 'Strings', instrument: 'strings' },
+      { name: 'Atmosphere', instrument: 'synth' },
+    ],
+    tempo: 72,
+    key: 'Am',
+  },
+  'tp-metal': {
+    tracks: [
+      { name: 'Rhythm Guitar L', instrument: 'guitar' },
+      { name: 'Rhythm Guitar R', instrument: 'guitar' },
+      { name: 'Lead Guitar', instrument: 'guitar' },
+      { name: 'Bass', instrument: 'bass' },
+      { name: 'Drums', instrument: 'drums' },
+      { name: 'Lead Synth', instrument: 'synth' },
+    ],
+    tempo: 160,
+    key: 'Em',
+  },
+};
+
 const CATEGORIES = [
   { key: 'all', label: 'All' },
   { key: 'sound-pack', label: 'Sound Packs' },
@@ -119,10 +160,40 @@ const CATEGORIES = [
 ];
 
 export function StorePage() {
+  const navigate = useNavigate();
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
   const canAccess = useSubscriptionStore((s) => s.canAccess);
   const tier = useSubscriptionStore((s) => s.tier);
+  const { installedIds, install, uninstall } = useStoreItemsStore();
+  const createProject = useProjectStore((s) => s.createProject);
+
+  const handleInstall = useCallback((item: StoreItem) => {
+    if (installedIds.includes(item.id)) {
+      uninstall(item.id);
+      return;
+    }
+
+    install(item.id);
+
+    // If it's a template, offer to create a project from it
+    if (item.category === 'template') {
+      const config = TEMPLATE_CONFIGS[item.id];
+      if (config) {
+        createProject({
+          name: `${item.name}`,
+          tempo: config.tempo,
+          timeSignature: [4, 4],
+          key: config.key,
+          tracks: config.tracks.map((t) => ({
+            name: t.name,
+            instrument: INSTRUMENTS[t.instrument] ?? INSTRUMENTS.synth,
+          })),
+        });
+        navigate('/music');
+      }
+    }
+  }, [installedIds, install, uninstall, createProject, navigate]);
 
   const filtered = STORE_ITEMS.filter((item) => {
     if (filter !== 'all' && item.category !== filter) return false;
@@ -218,9 +289,21 @@ export function StorePage() {
                       </span>
                     ))}
                   </div>
-                  <Button size="sm" variant={locked ? 'ghost' : 'secondary'} disabled={locked}>
-                    {locked ? `Requires ${item.price}` : 'Install'}
-                  </Button>
+                  {locked ? (
+                    <Button size="sm" variant="ghost" disabled>
+                      Requires {item.price}
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant={installedIds.includes(item.id) ? 'primary' : 'secondary'}
+                      onClick={() => handleInstall(item)}
+                    >
+                      {installedIds.includes(item.id)
+                        ? (item.category === 'template' ? 'Installed' : 'Uninstall')
+                        : (item.category === 'template' ? 'Use Template' : 'Install')}
+                    </Button>
+                  )}
                 </div>
               );
             })}

@@ -10,6 +10,8 @@ import { PianoRoll } from './components/PianoRoll';
 import { TransportBar } from './components/TransportBar';
 import { MixerPanel } from './components/MixerPanel';
 import { EffectsPanel } from './components/EffectsPanel';
+import { ChordLibrary } from './components/ChordLibrary';
+import { NotationView } from './components/NotationView';
 
 export function MusicForge() {
   useGlobalShortcuts();
@@ -19,6 +21,8 @@ export function MusicForge() {
   const setSelectedTrackId = useUIStore((s) => s.setSelectedTrackId);
   const [showMixer, setShowMixer] = useState(false);
   const [showEffects, setShowEffects] = useState(false);
+  const [showNotation, setShowNotation] = useState(false);
+  const showChordLibrary = useUIStore((s) => s.showChordLibrary);
   const [dragOver, setDragOver] = useState(false);
 
   useEffect(() => {
@@ -122,6 +126,8 @@ export function MusicForge() {
         showMixer={showMixer}
         onToggleEffects={() => setShowEffects(!showEffects)}
         showEffects={showEffects}
+        onToggleNotation={() => setShowNotation(!showNotation)}
+        showNotation={showNotation}
       />
       {showMixer && <MixerPanel />}
       <div className="flex flex-1 overflow-hidden">
@@ -135,13 +141,18 @@ export function MusicForge() {
               </div>
             </div>
           ) : selectedTrack ? (
-            <PianoRoll track={selectedTrack} />
+            showNotation ? (
+              <NotationView track={selectedTrack} />
+            ) : (
+              <PianoRoll track={selectedTrack} />
+            )
           ) : (
             <div className="flex items-center justify-center h-full text-forge-muted">
               Select a track to edit
             </div>
           )}
         </div>
+        {showChordLibrary && <ChordLibrary />}
         {showEffects && selectedTrack && (
           <EffectsPanel
             trackId={selectedTrack.id}

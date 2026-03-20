@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState, useRef } from 'react';
+import { useEffect, useCallback, useState, useRef, ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useProjectStore } from '../../../core/state/project-store';
 import { useTransportStore } from '../../../core/state/transport-store';
@@ -11,6 +11,8 @@ import { downloadMidiJson } from '../../../core/export/midi-json-exporter';
 import { downloadMidi } from '../../../core/export/midi-exporter';
 import { downloadWav } from '../../../core/export/wav-exporter';
 import { Metronome } from '../../../core/audio/metronome';
+import { importMidiFile } from '../../../core/import/midi-importer';
+import { importAudioFile, isAudioFile, isMidiFile } from '../../../core/import/audio-file-import';
 import { Button } from '../../../components/Button';
 import { Modal } from '../../../components/Modal';
 
@@ -19,9 +21,11 @@ interface TransportBarProps {
   showMixer: boolean;
   onToggleEffects?: () => void;
   showEffects?: boolean;
+  onToggleNotation?: () => void;
+  showNotation?: boolean;
 }
 
-export function TransportBar({ onToggleMixer, showMixer, onToggleEffects, showEffects }: TransportBarProps) {
+export function TransportBar({ onToggleMixer, showMixer, onToggleEffects, showEffects, onToggleNotation, showNotation }: TransportBarProps) {
   const navigate = useNavigate();
   const project = useProjectStore((s) => s.project);
   const setTempo = useProjectStore((s) => s.setTempo);
@@ -37,6 +41,9 @@ export function TransportBar({ onToggleMixer, showMixer, onToggleEffects, showEf
   const [exporting, setExporting] = useState(false);
   const [metronomeOn, setMetronomeOn] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const showChordLibrary = useUIStore((s) => s.showChordLibrary);
+  const setShowChordLibrary = useUIStore((s) => s.setShowChordLibrary);
 
   useEffect(() => {
     AudioEngine.onPosition((tick) => {
@@ -159,6 +166,44 @@ export function TransportBar({ onToggleMixer, showMixer, onToggleEffects, showEf
     }
   }, [project]);
 
+  const handleFileImport = useCallback(async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !project) return;
+
+    try {
+      if (isMidiFile(file)) {
+        const { tracks } = await importMidiFile(file);
+        for (const track of tracks) {
+          useProjectStore.setState((state) => {
+            if (!state.project) return state;
+            return {
+              project: {
+                ...state.project,
+                updatedAt: Date.now(),
+                tracks: [...state.project.tracks, track],
+              },
+            };
+          });
+        }
+      } else if (isAudioFile(file)) {
+        const track = await importAudioFile(file);
+        useProjectStore.setState((state) => {
+          if (!state.project) return state;
+          return {
+            project: {
+              ...state.project,
+              updatedAt: Date.now(),
+              tracks: [...state.project.tracks, track],
+            },
+          };
+        });
+      }
+    } catch {
+      // Failed to import
+    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }, [project]);
+
   if (!project) return null;
 
   const canMidi = canAccess('midiExport');
@@ -274,6 +319,40 @@ export function TransportBar({ onToggleMixer, showMixer, onToggleEffects, showEf
         >
           Vel
         </Button>
+
+        {/* Import file */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".mid,.midi,.wav,.mp3,.ogg"
+          onChange={handleFileImport}
+          className="hidden"
+        />
+        <Button size="sm" variant="ghost" onClick={() => fileInputRef.current?.click()} title="Import MIDI/Audio file">
+          Import
+        </Button>
+
+        {/* Chord Library */}
+        <Button
+          size="sm"
+          variant={showChordLibrary ? 'primary' : 'ghost'}
+          onClick={() => setShowChordLibrary(!showChordLibrary)}
+          title="Chord Library"
+        >
+          Chords
+        </Button>
+
+        {/* Notation toggle */}
+        {onToggleNotation && (
+          <Button
+            size="sm"
+            variant={showNotation ? 'primary' : 'ghost'}
+            onClick={onToggleNotation}
+            title="Toggle notation view"
+          >
+            Notes
+          </Button>
+        )}
 
         <div className="ml-auto flex items-center gap-1">
           <Button
