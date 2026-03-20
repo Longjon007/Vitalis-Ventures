@@ -54,6 +54,7 @@ export function PianoRoll({ track }: PianoRollProps) {
   const setZoom = useUIStore((s) => s.setPianoRollZoom);
   const snapGrid = useUIStore((s) => s.snapGrid);
   const showVelocityEditor = useUIStore((s) => s.showVelocityEditor);
+  const showGhostNotes = useUIStore((s) => s.showGhostNotes);
 
   const GRID_SNAP = SNAP_GRID_TICKS[snapGrid];
   const tickWidth = BASE_TICK_WIDTH * zoom;
@@ -164,6 +165,33 @@ export function PianoRoll({ track }: PianoRollProps) {
       ctx.setLineDash([]);
     }
 
+    // Draw ghost notes from other tracks
+    if (showGhostNotes && project) {
+      for (const otherTrack of project.tracks) {
+        if (otherTrack.id === track.id) continue;
+        if (otherTrack.muted) continue;
+        if (otherTrack.audioUrl) continue; // skip audio tracks
+        for (const note of otherTrack.notes) {
+          if (note.pitch < MIN_PITCH || note.pitch >= MAX_PITCH) continue;
+          const x = note.startTick * tickWidth;
+          const y = (MAX_PITCH - note.pitch - 1) * NOTE_HEIGHT;
+          const w = note.durationTicks * tickWidth;
+          ctx.fillStyle = otherTrack.instrument.color;
+          ctx.globalAlpha = 0.15;
+          ctx.beginPath();
+          ctx.roundRect(x, y + 2, Math.max(w, 4), NOTE_HEIGHT - 4, 2);
+          ctx.fill();
+          ctx.strokeStyle = otherTrack.instrument.color;
+          ctx.globalAlpha = 0.3;
+          ctx.lineWidth = 0.5;
+          ctx.beginPath();
+          ctx.roundRect(x, y + 2, Math.max(w, 4), NOTE_HEIGHT - 4, 2);
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+        }
+      }
+    }
+
     // Draw notes
     for (const note of track.notes) {
       if (note.pitch < MIN_PITCH || note.pitch >= MAX_PITCH) continue;
@@ -227,7 +255,7 @@ export function PianoRoll({ track }: PianoRollProps) {
     ctx.moveTo(playheadX, 0);
     ctx.lineTo(playheadX, canvas.height);
     ctx.stroke();
-  }, [track, selectedNoteIds, currentTick, totalTicks, project, scaleNotes, tickWidth, loop, selectionRect]);
+  }, [track, selectedNoteIds, currentTick, totalTicks, project, scaleNotes, tickWidth, loop, selectionRect, showGhostNotes]);
 
   useEffect(() => {
     draw();

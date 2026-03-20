@@ -20,12 +20,18 @@ interface UIState {
   showChordLibrary: boolean;
   snapGrid: SnapGridSize;
   showVelocityEditor: boolean;
+  showGhostNotes: boolean;
+  showAutomation: boolean;
+  keyboardInputEnabled: boolean;
   setActiveModule: (module: ActiveModule) => void;
   setSelectedTrackId: (id: string | null) => void;
   setPianoRollZoom: (zoom: number) => void;
   setShowChordLibrary: (show: boolean) => void;
   setSnapGrid: (snap: SnapGridSize) => void;
   setShowVelocityEditor: (show: boolean) => void;
+  setShowGhostNotes: (show: boolean) => void;
+  setShowAutomation: (show: boolean) => void;
+  setKeyboardInputEnabled: (enabled: boolean) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -35,6 +41,9 @@ export const useUIStore = create<UIState>((set) => ({
   showChordLibrary: false,
   snapGrid: '1/16',
   showVelocityEditor: false,
+  showGhostNotes: false,
+  showAutomation: false,
+  keyboardInputEnabled: false,
 
   setActiveModule: (module) => set({ activeModule: module }),
   setSelectedTrackId: (id) => set({ selectedTrackId: id }),
@@ -42,4 +51,7 @@ export const useUIStore = create<UIState>((set) => ({
   setShowChordLibrary: (show) => set({ showChordLibrary: show }),
   setSnapGrid: (snap) => set({ snapGrid: snap }),
   setShowVelocityEditor: (show) => set({ showVelocityEditor: show }),
+  setShowGhostNotes: (show) => set({ showGhostNotes: show }),
+  setShowAutomation: (show) => set({ showAutomation: show }),
+  setKeyboardInputEnabled: (enabled) => set({ keyboardInputEnabled: enabled }),
 }));

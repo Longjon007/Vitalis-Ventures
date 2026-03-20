@@ -9,6 +9,18 @@ export interface NoteEvent {
   velocity: number;     // 0-127
 }
 
+export type AutomationParam = 'volume' | 'pan' | 'filterCutoff';
+
+export interface AutomationPoint {
+  tick: number;
+  value: number; // normalized 0-1
+}
+
+export interface AutomationLane {
+  param: AutomationParam;
+  points: AutomationPoint[];
+}
+
 export interface Track {
   id: string;
   name: string;
@@ -19,6 +31,7 @@ export interface Track {
   muted: boolean;
   solo: boolean;
   audioUrl?: string; // AI-generated audio track URL
+  automation?: AutomationLane[];
 }
 
 export interface Project {

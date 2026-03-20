@@ -23,9 +23,11 @@ interface TransportBarProps {
   showEffects?: boolean;
   onToggleNotation?: () => void;
   showNotation?: boolean;
+  onToggleShare?: () => void;
+  showShare?: boolean;
 }
 
-export function TransportBar({ onToggleMixer, showMixer, onToggleEffects, showEffects, onToggleNotation, showNotation }: TransportBarProps) {
+export function TransportBar({ onToggleMixer, showMixer, onToggleEffects, showEffects, onToggleNotation, showNotation, onToggleShare, showShare }: TransportBarProps) {
   const navigate = useNavigate();
   const project = useProjectStore((s) => s.project);
   const setTempo = useProjectStore((s) => s.setTempo);
@@ -44,6 +46,12 @@ export function TransportBar({ onToggleMixer, showMixer, onToggleEffects, showEf
   const fileInputRef = useRef<HTMLInputElement>(null);
   const showChordLibrary = useUIStore((s) => s.showChordLibrary);
   const setShowChordLibrary = useUIStore((s) => s.setShowChordLibrary);
+  const showGhostNotes = useUIStore((s) => s.showGhostNotes);
+  const setShowGhostNotes = useUIStore((s) => s.setShowGhostNotes);
+  const showAutomation = useUIStore((s) => s.showAutomation);
+  const setShowAutomation = useUIStore((s) => s.setShowAutomation);
+  const keyboardInputEnabled = useUIStore((s) => s.keyboardInputEnabled);
+  const setKeyboardInputEnabled = useUIStore((s) => s.setKeyboardInputEnabled);
 
   useEffect(() => {
     AudioEngine.onPosition((tick) => {
@@ -342,6 +350,36 @@ export function TransportBar({ onToggleMixer, showMixer, onToggleEffects, showEf
           Chords
         </Button>
 
+        {/* Ghost notes overlay */}
+        <Button
+          size="sm"
+          variant={showGhostNotes ? 'primary' : 'ghost'}
+          onClick={() => setShowGhostNotes(!showGhostNotes)}
+          title="Show notes from other tracks"
+        >
+          Ghost
+        </Button>
+
+        {/* Keyboard input */}
+        <Button
+          size="sm"
+          variant={keyboardInputEnabled ? 'primary' : 'ghost'}
+          onClick={() => setKeyboardInputEnabled(!keyboardInputEnabled)}
+          title="Play notes with computer keyboard (Z-M = C3-B3, Q-U = C4-B4)"
+        >
+          Keys
+        </Button>
+
+        {/* Automation lanes */}
+        <Button
+          size="sm"
+          variant={showAutomation ? 'primary' : 'ghost'}
+          onClick={() => setShowAutomation(!showAutomation)}
+          title="Show automation lanes"
+        >
+          Auto
+        </Button>
+
         {/* Notation toggle */}
         {onToggleNotation && (
           <Button
@@ -371,6 +409,16 @@ export function TransportBar({ onToggleMixer, showMixer, onToggleEffects, showEf
               title={!canEffects ? 'Effects require Pro plan' : undefined}
             >
               FX
+            </Button>
+          )}
+          {onToggleShare && (
+            <Button
+              size="sm"
+              variant={showShare ? 'primary' : 'ghost'}
+              onClick={onToggleShare}
+              title="Share & Collaborate"
+            >
+              Share
             </Button>
           )}
           <Button
@@ -448,6 +496,19 @@ export function TransportBar({ onToggleMixer, showMixer, onToggleEffects, showEf
             <span className="text-forge-muted">Arrow keys</span><span>Navigate grid</span>
             <span className="text-forge-muted">0-9</span><span>Enter fret number</span>
             <span className="text-forge-muted">Delete / Backspace</span><span>Clear cell</span>
+          </div>
+          <h3 className="font-semibold text-forge-accent mt-4">Keyboard Input (Keys mode)</h3>
+          <div className="grid grid-cols-2 gap-y-1 text-xs">
+            <span className="text-forge-muted">Z S X D C V G B H N J M</span><span>C3 to B3 (chromatic)</span>
+            <span className="text-forge-muted">Q 2 W 3 E R 5 T 6 Y 7 U</span><span>C4 to B4 (chromatic)</span>
+            <span className="text-forge-muted">While playing</span><span>Real-time recording</span>
+            <span className="text-forge-muted">While stopped</span><span>Step recording (auto-advance)</span>
+          </div>
+          <h3 className="font-semibold text-forge-accent mt-4">Automation</h3>
+          <div className="grid grid-cols-2 gap-y-1 text-xs">
+            <span className="text-forge-muted">Click empty area</span><span>Add automation point</span>
+            <span className="text-forge-muted">Drag point</span><span>Move automation point</span>
+            <span className="text-forge-muted">Right-click point</span><span>Delete automation point</span>
           </div>
           <h3 className="font-semibold text-forge-accent mt-4">Scale Highlighting</h3>
           <div className="text-xs text-forge-muted">

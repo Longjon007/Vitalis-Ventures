@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useProjectStore } from '../../core/state/project-store';
 import { useUIStore } from '../../core/state/ui-store';
 import { useGlobalShortcuts } from '../../core/hooks/useGlobalShortcuts';
+import { useKeyboardMidiInput } from '../../core/hooks/useKeyboardMidiInput';
 import { importMidiFile } from '../../core/import/midi-importer';
 import { importAudioFile, isAudioFile, isMidiFile } from '../../core/import/audio-file-import';
 import { TrackList } from './components/TrackList';
@@ -12,9 +13,12 @@ import { MixerPanel } from './components/MixerPanel';
 import { EffectsPanel } from './components/EffectsPanel';
 import { ChordLibrary } from './components/ChordLibrary';
 import { NotationView } from './components/NotationView';
+import { SharePanel } from './components/SharePanel';
+import { AutomationLane } from './components/AutomationLane';
 
 export function MusicForge() {
   useGlobalShortcuts();
+  useKeyboardMidiInput();
   const navigate = useNavigate();
   const project = useProjectStore((s) => s.project);
   const selectedTrackId = useUIStore((s) => s.selectedTrackId);
@@ -22,7 +26,9 @@ export function MusicForge() {
   const [showMixer, setShowMixer] = useState(false);
   const [showEffects, setShowEffects] = useState(false);
   const [showNotation, setShowNotation] = useState(false);
+  const [showShare, setShowShare] = useState(false);
   const showChordLibrary = useUIStore((s) => s.showChordLibrary);
+  const showAutomation = useUIStore((s) => s.showAutomation);
   const [dragOver, setDragOver] = useState(false);
 
   useEffect(() => {
@@ -128,6 +134,8 @@ export function MusicForge() {
         showEffects={showEffects}
         onToggleNotation={() => setShowNotation(!showNotation)}
         showNotation={showNotation}
+        onToggleShare={() => setShowShare(!showShare)}
+        showShare={showShare}
       />
       {showMixer && <MixerPanel />}
       <div className="flex flex-1 overflow-hidden">
@@ -160,7 +168,11 @@ export function MusicForge() {
             onClose={() => setShowEffects(false)}
           />
         )}
+        {showShare && <SharePanel onClose={() => setShowShare(false)} />}
       </div>
+      {showAutomation && selectedTrack && !selectedTrack.audioUrl && (
+        <AutomationLane trackId={selectedTrack.id} trackName={selectedTrack.name} />
+      )}
     </div>
   );
 }
