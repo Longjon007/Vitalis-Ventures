@@ -1,11 +1,14 @@
 import { NoteDuration } from './music';
 import { Track } from './project';
 
+export type StrumDirection = 'down' | 'up';
+
 export interface TabPosition {
   id: string;
   tick: number;
   strings: (number | null)[];  // fret per string, null = not played
   duration: NoteDuration;
+  strum?: StrumDirection;
 }
 
 export interface TabTrack extends Track {

@@ -5,6 +5,7 @@ import { useTransportStore } from '../../../core/state/transport-store';
 import { useSubscriptionStore } from '../../../core/state/subscription-store';
 import { AudioEngine } from '../../../core/audio/audio-engine';
 import { useHistoryStore } from '../../../core/state/history-middleware';
+import { useUIStore, SNAP_GRID_TICKS, SnapGridSize } from '../../../core/state/ui-store';
 import { formatPosition, ticksPerMeasure } from '../../../core/utils/timing-utils';
 import { downloadMidiJson } from '../../../core/export/midi-json-exporter';
 import { downloadMidi } from '../../../core/export/midi-exporter';
@@ -26,6 +27,11 @@ export function TransportBar({ onToggleMixer, showMixer, onToggleEffects, showEf
   const setTempo = useProjectStore((s) => s.setTempo);
   const { isPlaying, currentTick, loop, play, pause, stop, setCurrentTick, setLoop, clearLoop } = useTransportStore();
   const canAccess = useSubscriptionStore((s) => s.canAccess);
+  const snapGrid = useUIStore((s) => s.snapGrid);
+  const setSnapGrid = useUIStore((s) => s.setSnapGrid);
+  const showVelocityEditor = useUIStore((s) => s.showVelocityEditor);
+  const setShowVelocityEditor = useUIStore((s) => s.setShowVelocityEditor);
+  const selectedTrackId = useUIStore((s) => s.selectedTrackId);
   const [showHelp, setShowHelp] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -112,6 +118,23 @@ export function TransportBar({ onToggleMixer, showMixer, onToggleEffects, showEf
       Metronome.stop();
     }
   }, [metronomeOn, isPlaying, project]);
+
+  const handleQuantize = useCallback(() => {
+    if (!project || !selectedTrackId) return;
+    const track = project.tracks.find((t) => t.id === selectedTrackId);
+    if (!track || track.notes.length === 0) return;
+
+    const snapTicks = SNAP_GRID_TICKS[snapGrid];
+    const currentProject = useProjectStore.getState().project;
+    if (currentProject) useHistoryStore.getState().pushSnapshot(currentProject);
+
+    const quantizedNotes = track.notes.map((n) => ({
+      ...n,
+      startTick: Math.round(n.startTick / snapTicks) * snapTicks,
+      durationTicks: Math.max(snapTicks, Math.round(n.durationTicks / snapTicks) * snapTicks),
+    }));
+    useProjectStore.getState().updateTrackNotes(selectedTrackId, quantizedNotes);
+  }, [project, selectedTrackId, snapGrid]);
 
   const handleExportJson = useCallback(() => {
     if (!project) return;
@@ -220,6 +243,37 @@ export function TransportBar({ onToggleMixer, showMixer, onToggleEffects, showEf
         <div className="text-xs text-forge-muted">
           {project.timeSignature[0]}/{project.timeSignature[1]} | Key: {project.key}
         </div>
+
+        {/* Snap Grid */}
+        <div className="flex items-center gap-1">
+          <label className="text-xs text-forge-muted">Snap</label>
+          <select
+            value={snapGrid}
+            onChange={(e) => setSnapGrid(e.target.value as SnapGridSize)}
+            className="bg-forge-bg border border-forge-border rounded px-1.5 py-0.5 text-xs"
+          >
+            <option value="1/4">1/4</option>
+            <option value="1/8">1/8</option>
+            <option value="1/16">1/16</option>
+            <option value="1/32">1/32</option>
+            <option value="off">Off</option>
+          </select>
+        </div>
+
+        {/* Quantize */}
+        <Button size="sm" variant="ghost" onClick={handleQuantize} title="Quantize selected track to grid">
+          Q
+        </Button>
+
+        {/* Velocity Editor */}
+        <Button
+          size="sm"
+          variant={showVelocityEditor ? 'primary' : 'ghost'}
+          onClick={() => setShowVelocityEditor(!showVelocityEditor)}
+          title="Toggle velocity editor"
+        >
+          Vel
+        </Button>
 
         <div className="ml-auto flex items-center gap-1">
           <Button

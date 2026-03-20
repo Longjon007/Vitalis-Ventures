@@ -1,4 +1,6 @@
+import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { v4 as uuid } from 'uuid';
 import { useProjectStore } from '../../../core/state/project-store';
 import { useUIStore } from '../../../core/state/ui-store';
 import { useSubscriptionStore } from '../../../core/state/subscription-store';
@@ -15,6 +17,50 @@ export function TrackList() {
   const setSelectedTrackId = useUIStore((s) => s.setSelectedTrackId);
   const features = useSubscriptionStore((s) => s.features);
   const canAi = useSubscriptionStore((s) => s.canAccess('aiGeneration'));
+
+  const duplicateTrack = useCallback(
+    (trackId: string) => {
+      if (!project) return;
+      const track = project.tracks.find((t) => t.id === trackId);
+      if (!track) return;
+      useProjectStore.setState((state) => {
+        if (!state.project) return state;
+        const newTrack = {
+          ...track,
+          id: uuid(),
+          name: `${track.name} (copy)`,
+          notes: track.notes.map((n) => ({ ...n, id: uuid() })),
+        };
+        return {
+          project: {
+            ...state.project,
+            updatedAt: Date.now(),
+            tracks: [...state.project.tracks, newTrack],
+          },
+        };
+      });
+    },
+    [project]
+  );
+
+  const moveTrack = useCallback(
+    (trackId: string, direction: 'up' | 'down') => {
+      if (!project) return;
+      const idx = project.tracks.findIndex((t) => t.id === trackId);
+      if (idx === -1) return;
+      const newIdx = direction === 'up' ? idx - 1 : idx + 1;
+      if (newIdx < 0 || newIdx >= project.tracks.length) return;
+      useProjectStore.setState((state) => {
+        if (!state.project) return state;
+        const tracks = [...state.project.tracks];
+        [tracks[idx], tracks[newIdx]] = [tracks[newIdx], tracks[idx]];
+        return {
+          project: { ...state.project, updatedAt: Date.now(), tracks },
+        };
+      });
+    },
+    [project]
+  );
 
   if (!project) return null;
 
@@ -56,7 +102,7 @@ export function TrackList() {
       )}
 
       <div className="flex-1 overflow-auto">
-        {project.tracks.map((track) => {
+        {project.tracks.map((track, trackIdx) => {
           const isSelected = track.id === selectedTrackId;
           return (
             <div
@@ -72,15 +118,53 @@ export function TrackList() {
                   style={{ backgroundColor: track.instrument.color }}
                 />
                 <span className="text-sm font-medium truncate flex-1">{track.name}</span>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeTrack(track.id);
-                  }}
-                  className="text-forge-muted hover:text-forge-danger text-xs"
-                >
-                  x
-                </button>
+                <div className="flex items-center gap-0.5 shrink-0">
+                  {/* Reorder buttons */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      moveTrack(track.id, 'up');
+                    }}
+                    disabled={trackIdx === 0}
+                    className="text-forge-muted hover:text-forge-text text-[10px] disabled:opacity-30 px-0.5"
+                    title="Move up"
+                  >
+                    {'\u25B2'}
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      moveTrack(track.id, 'down');
+                    }}
+                    disabled={trackIdx === project.tracks.length - 1}
+                    className="text-forge-muted hover:text-forge-text text-[10px] disabled:opacity-30 px-0.5"
+                    title="Move down"
+                  >
+                    {'\u25BC'}
+                  </button>
+                  {/* Duplicate */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      duplicateTrack(track.id);
+                    }}
+                    className="text-forge-muted hover:text-forge-text text-[10px] px-0.5"
+                    title="Duplicate track"
+                  >
+                    ++
+                  </button>
+                  {/* Delete */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeTrack(track.id);
+                    }}
+                    className="text-forge-muted hover:text-forge-danger text-xs px-0.5"
+                    title="Remove track"
+                  >
+                    x
+                  </button>
+                </div>
               </div>
 
               <div className="flex items-center gap-2">

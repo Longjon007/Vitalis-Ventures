@@ -4,18 +4,18 @@ import { Track, NoteEvent } from '../../../core/types/project';
 import { useProjectStore } from '../../../core/state/project-store';
 import { useTransportStore } from '../../../core/state/transport-store';
 import { useHistoryStore } from '../../../core/state/history-middleware';
-import { useUIStore } from '../../../core/state/ui-store';
+import { useUIStore, SNAP_GRID_TICKS } from '../../../core/state/ui-store';
 import { midiToNoteName, isBlackKey } from '../../../core/utils/note-utils';
 import { TICKS_PER_BEAT } from '../../../core/types/music';
 import { getScaleNotes, isInScale } from '../../../core/types/scales';
 import { WaveformCanvas } from './WaveformCanvas';
 
 const NOTE_HEIGHT = 14;
+const VELOCITY_LANE_HEIGHT = 60;
 const BASE_TICK_WIDTH = 0.15;
 const MIN_PITCH = 36; // C2
 const MAX_PITCH = 84; // C6
 const PITCH_RANGE = MAX_PITCH - MIN_PITCH;
-const GRID_SNAP = TICKS_PER_BEAT / 4; // sixteenth note
 const RESIZE_HANDLE_PX = 8;
 
 type InteractionMode = 'idle' | 'creating' | 'dragging' | 'resizing' | 'selecting';
@@ -52,7 +52,10 @@ export function PianoRoll({ track }: PianoRollProps) {
   const project = useProjectStore((s) => s.project);
   const zoom = useUIStore((s) => s.pianoRollZoom);
   const setZoom = useUIStore((s) => s.setPianoRollZoom);
+  const snapGrid = useUIStore((s) => s.snapGrid);
+  const showVelocityEditor = useUIStore((s) => s.showVelocityEditor);
 
+  const GRID_SNAP = SNAP_GRID_TICKS[snapGrid];
   const tickWidth = BASE_TICK_WIDTH * zoom;
 
   // Scale highlighting
@@ -545,30 +548,140 @@ export function PianoRoll({ track }: PianoRollProps) {
     );
   }
 
+  // Velocity lane drawing
+  const velocityCanvasRef = useRef<HTMLCanvasElement>(null);
+
+  const drawVelocity = useCallback(() => {
+    const canvas = velocityCanvasRef.current;
+    if (!canvas || !showVelocityEditor) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#121225';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Grid lines
+    ctx.strokeStyle = '#222240';
+    ctx.lineWidth = 0.5;
+    for (let v = 0; v <= 127; v += 32) {
+      const y = VELOCITY_LANE_HEIGHT - (v / 127) * VELOCITY_LANE_HEIGHT;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(canvas.width, y);
+      ctx.stroke();
+    }
+
+    // Beat lines
+    for (let tick = 0; tick < totalTicks; tick += TICKS_PER_BEAT) {
+      const x = tick * tickWidth;
+      const isMeasure = tick % (TICKS_PER_BEAT * (project?.timeSignature[0] ?? 4)) === 0;
+      ctx.strokeStyle = isMeasure ? '#3a3a5a' : '#252545';
+      ctx.lineWidth = isMeasure ? 1 : 0.5;
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, VELOCITY_LANE_HEIGHT);
+      ctx.stroke();
+    }
+
+    // Velocity bars
+    for (const note of track.notes) {
+      if (note.pitch < MIN_PITCH || note.pitch >= MAX_PITCH) continue;
+      const x = note.startTick * tickWidth;
+      const barHeight = (note.velocity / 127) * (VELOCITY_LANE_HEIGHT - 4);
+      const isSelected = selectedNoteIds.has(note.id);
+
+      ctx.fillStyle = isSelected ? '#8b7cf8' : track.instrument.color;
+      ctx.globalAlpha = 0.8;
+      ctx.fillRect(x, VELOCITY_LANE_HEIGHT - barHeight - 2, Math.max(note.durationTicks * tickWidth, 3), barHeight);
+      ctx.globalAlpha = 1;
+    }
+
+    // Playhead
+    const playheadX = currentTick * tickWidth;
+    ctx.strokeStyle = '#ff4444';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(playheadX, 0);
+    ctx.lineTo(playheadX, VELOCITY_LANE_HEIGHT);
+    ctx.stroke();
+  }, [track, selectedNoteIds, currentTick, totalTicks, project, tickWidth, showVelocityEditor]);
+
+  useEffect(() => {
+    drawVelocity();
+  }, [drawVelocity]);
+
+  // Handle velocity editing via click on velocity lane
+  const handleVelocityMouseDown = useCallback(
+    (e: React.MouseEvent<HTMLCanvasElement>) => {
+      const canvas = velocityCanvasRef.current;
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const x = (e.clientX - rect.left) * scaleX;
+      const y = (e.clientY - rect.top) * scaleY;
+
+      const newVelocity = Math.round(Math.max(1, Math.min(127, ((VELOCITY_LANE_HEIGHT - y) / VELOCITY_LANE_HEIGHT) * 127)));
+
+      // Find note at this x position
+      for (const note of track.notes) {
+        if (note.pitch < MIN_PITCH || note.pitch >= MAX_PITCH) continue;
+        const nx = note.startTick * tickWidth;
+        const nw = Math.max(note.durationTicks * tickWidth, 3);
+        if (x >= nx && x <= nx + nw) {
+          pushUndoSnapshot();
+          updateNote(track.id, note.id, { velocity: newVelocity });
+          break;
+        }
+      }
+    },
+    [track, tickWidth, updateNote, pushUndoSnapshot]
+  );
+
   // Audio tracks show waveform display
   if (track.audioUrl) {
     return <WaveformCanvas track={track} />;
   }
 
   return (
-    <div className="flex h-full">
-      <div className="w-12 shrink-0 overflow-hidden border-r border-forge-border">
-        {pianoKeys}
+    <div className="flex flex-col h-full">
+      <div className="flex flex-1 overflow-hidden">
+        <div className="w-12 shrink-0 overflow-hidden border-r border-forge-border">
+          {pianoKeys}
+        </div>
+        <div ref={containerRef} className="flex-1 overflow-auto">
+          <canvas
+            ref={canvasRef}
+            width={canvasWidth}
+            height={canvasHeight}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            onWheel={handleWheel}
+            className="cursor-crosshair"
+            style={{ imageRendering: 'pixelated' }}
+          />
+        </div>
       </div>
-      <div ref={containerRef} className="flex-1 overflow-auto">
-        <canvas
-          ref={canvasRef}
-          width={canvasWidth}
-          height={canvasHeight}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
-          onWheel={handleWheel}
-          className="cursor-crosshair"
-          style={{ imageRendering: 'pixelated' }}
-        />
-      </div>
+      {showVelocityEditor && (
+        <div className="flex shrink-0 border-t border-forge-border">
+          <div className="w-12 shrink-0 border-r border-forge-border bg-forge-bg flex items-center justify-center">
+            <span className="text-[9px] text-forge-muted font-mono -rotate-90">VEL</span>
+          </div>
+          <div className="flex-1 overflow-auto">
+            <canvas
+              ref={velocityCanvasRef}
+              width={canvasWidth}
+              height={VELOCITY_LANE_HEIGHT}
+              onMouseDown={handleVelocityMouseDown}
+              className="cursor-pointer"
+              style={{ imageRendering: 'pixelated' }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
