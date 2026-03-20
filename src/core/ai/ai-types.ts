@@ -2,6 +2,8 @@ export type GenerationMode = 'full-song' | 'instrumental' | 'stem' | 'continuati
 
 export type StemType = 'drums' | 'bass' | 'melody' | 'vocals' | 'harmony' | 'other';
 
+export type AiModel = 'musicgen' | 'stableAudio25';
+
 export interface GenerationRequest {
   mode: GenerationMode;
   prompt: string;
@@ -11,6 +13,7 @@ export interface GenerationRequest {
   key?: string;            // musical key, inherited from project
   stemType?: StemType;     // for stem mode
   referenceTrackId?: string; // for continuation/variation
+  model?: AiModel;         // which AI model to use
 }
 
 export interface GenerationResult {
@@ -60,8 +63,14 @@ export const STEM_TYPE_LABELS: Record<StemType, string> = {
 export const REPLICATE_MODELS = {
   musicgen: 'meta/musicgen:671ac645ce5e552cc63a54a2bbff63fcf798043055d2dac5fc9e36a837eedbb',
   stableAudio: 'stability-ai/stable-audio-open-1.0',
+  stableAudio25: 'stability-ai/stable-audio:07d78e27fb4025f1c29be41da10c5e1dc0e32e020be9281db98f4c8a738200c6',
   demucs: 'cjwbw/demucs:25a173108cff36ef9f80f854c162d01df9e6528be175794b81571f6740379d68',
 } as const;
+
+export const AI_MODEL_LABELS: Record<AiModel, string> = {
+  musicgen: 'MusicGen (fast, 30s max)',
+  stableAudio25: 'Stable Audio 2.5 (quality, 3 min)',
+};
 
 export const MAX_DURATION: Record<string, number> = {
   free: 15,

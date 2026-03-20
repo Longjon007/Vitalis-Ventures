@@ -17,16 +17,28 @@ function buildModelInput(request: GenerationRequest): {
   input: Record<string, unknown>;
 } {
   const duration = request.duration ?? 30;
+  const useStableAudio = request.model === 'stableAudio25';
 
   switch (request.mode) {
     case 'full-song':
     case 'instrumental':
     case 'continuation':
     case 'variation': {
-      // Use MusicGen for instrumental generation
       const prompt = request.mode === 'instrumental'
         ? `${request.prompt}, instrumental, no vocals`
         : request.prompt;
+
+      if (useStableAudio) {
+        return {
+          version: REPLICATE_MODELS.stableAudio25,
+          input: {
+            prompt,
+            duration: Math.min(duration, 180), // Stable Audio max ~3 min
+            steps: 100,
+            cfg_scale: 7,
+          },
+        };
+      }
 
       return {
         version: REPLICATE_MODELS.musicgen,
@@ -43,8 +55,20 @@ function buildModelInput(request: GenerationRequest): {
     }
 
     case 'stem': {
-      // For stem generation, generate full then separate
       const stemPrompt = buildStemPrompt(request.prompt, request.stemType ?? 'melody');
+
+      if (useStableAudio) {
+        return {
+          version: REPLICATE_MODELS.stableAudio25,
+          input: {
+            prompt: stemPrompt,
+            duration: Math.min(duration, 180),
+            steps: 100,
+            cfg_scale: 7,
+          },
+        };
+      }
+
       return {
         version: REPLICATE_MODELS.musicgen,
         input: {

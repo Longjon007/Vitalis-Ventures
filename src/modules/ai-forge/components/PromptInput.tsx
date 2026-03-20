@@ -4,6 +4,8 @@ import {
   GENERATION_MODE_LABELS,
   StemType,
   STEM_TYPE_LABELS,
+  AiModel,
+  AI_MODEL_LABELS,
 } from '../../../core/ai/ai-types';
 import { Button } from '../../../components/Button';
 
@@ -13,6 +15,7 @@ interface PromptInputProps {
     duration: number;
     stemType?: StemType;
     separateStems: boolean;
+    model?: AiModel;
   }) => void;
   disabled?: boolean;
   maxDuration: number;
@@ -27,6 +30,7 @@ export function PromptInput({ onGenerate, disabled, maxDuration, canSeparateStem
   const [stemType, setStemType] = useState<StemType>('melody');
   const [separateStems, setSeparateStems] = useState(false);
   const [showLyrics, setShowLyrics] = useState(false);
+  const [model, setModel] = useState<AiModel>('stableAudio25');
 
   const handleSubmit = () => {
     if (!prompt.trim()) return;
@@ -35,6 +39,7 @@ export function PromptInput({ onGenerate, disabled, maxDuration, canSeparateStem
       duration: Math.min(duration, maxDuration),
       stemType: mode === 'stem' ? stemType : undefined,
       separateStems: separateStems && canSeparateStems,
+      model,
     });
   };
 
@@ -108,6 +113,24 @@ export function PromptInput({ onGenerate, disabled, maxDuration, canSeparateStem
           )}
         </div>
       )}
+
+      {/* Model selector */}
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-forge-muted">Model:</span>
+        {(Object.entries(AI_MODEL_LABELS) as [AiModel, string][]).map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => setModel(key)}
+            className={`px-2 py-1 rounded text-xs ${
+              model === key
+                ? 'bg-forge-accent/20 text-forge-accent border border-forge-accent/40'
+                : 'bg-forge-bg border border-forge-border text-forge-muted'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
 
       {/* Duration + options */}
       <div className="flex items-center gap-4 flex-wrap">

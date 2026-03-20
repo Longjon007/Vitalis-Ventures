@@ -59,6 +59,17 @@ export const AudioEngine = {
     await Tone.start();
   },
 
+  setLoop(startTick: number, endTick: number, bpm: number) {
+    const transport = Tone.getTransport();
+    transport.loop = true;
+    transport.loopStart = ticksToSeconds(startTick, bpm);
+    transport.loopEnd = ticksToSeconds(endTick, bpm);
+  },
+
+  clearLoop() {
+    Tone.getTransport().loop = false;
+  },
+
   scheduleProject(project: Project) {
     this.clearSchedule();
     Tone.getTransport().bpm.value = project.tempo;

@@ -1,24 +1,35 @@
 import { ReplicatePrediction } from './ai-types';
+import { getApiConfig } from './api-config';
 
-const REPLICATE_API_BASE = 'https://api.replicate.com/v1';
-
-function getApiKey(): string {
-  const key = localStorage.getItem('replicate-api-key');
+function getAuthHeaders(): Record<string, string> {
+  const config = getApiConfig();
+  if (config.mode === 'proxy' && config.sessionToken) {
+    return {
+      'Authorization': `Bearer ${config.sessionToken}`,
+      'Content-Type': 'application/json',
+    };
+  }
+  const key = config.apiKey || localStorage.getItem('replicate-api-key');
   if (!key) throw new Error('Replicate API key not configured. Add your key in ForgeAI settings.');
-  return key;
+  return {
+    'Authorization': `Bearer ${key}`,
+    'Content-Type': 'application/json',
+    'Prefer': 'respond-async',
+  };
+}
+
+function getBaseUrl(): string {
+  const config = getApiConfig();
+  return config.mode === 'proxy' ? config.baseUrl : 'https://api.replicate.com/v1';
 }
 
 export async function createPrediction(
   modelVersion: string,
   input: Record<string, unknown>
 ): Promise<ReplicatePrediction> {
-  const res = await fetch(`${REPLICATE_API_BASE}/predictions`, {
+  const res = await fetch(`${getBaseUrl()}/predictions`, {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${getApiKey()}`,
-      'Content-Type': 'application/json',
-      'Prefer': 'respond-async',
-    },
+    headers: getAuthHeaders(),
     body: JSON.stringify({
       version: modelVersion,
       input,
@@ -34,10 +45,8 @@ export async function createPrediction(
 }
 
 export async function getPrediction(predictionId: string): Promise<ReplicatePrediction> {
-  const res = await fetch(`${REPLICATE_API_BASE}/predictions/${predictionId}`, {
-    headers: {
-      'Authorization': `Bearer ${getApiKey()}`,
-    },
+  const res = await fetch(`${getBaseUrl()}/predictions/${predictionId}`, {
+    headers: getAuthHeaders(),
   });
 
   if (!res.ok) {
@@ -48,11 +57,9 @@ export async function getPrediction(predictionId: string): Promise<ReplicatePred
 }
 
 export async function cancelPrediction(predictionId: string): Promise<void> {
-  await fetch(`${REPLICATE_API_BASE}/predictions/${predictionId}/cancel`, {
+  await fetch(`${getBaseUrl()}/predictions/${predictionId}/cancel`, {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${getApiKey()}`,
-    },
+    headers: getAuthHeaders(),
   });
 }
 

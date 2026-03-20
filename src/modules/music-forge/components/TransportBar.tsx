@@ -5,10 +5,11 @@ import { useTransportStore } from '../../../core/state/transport-store';
 import { useSubscriptionStore } from '../../../core/state/subscription-store';
 import { AudioEngine } from '../../../core/audio/audio-engine';
 import { useHistoryStore } from '../../../core/state/history-middleware';
-import { formatPosition } from '../../../core/utils/timing-utils';
+import { formatPosition, ticksPerMeasure } from '../../../core/utils/timing-utils';
 import { downloadMidiJson } from '../../../core/export/midi-json-exporter';
 import { downloadMidi } from '../../../core/export/midi-exporter';
 import { downloadWav } from '../../../core/export/wav-exporter';
+import { Metronome } from '../../../core/audio/metronome';
 import { Button } from '../../../components/Button';
 import { Modal } from '../../../components/Modal';
 
@@ -23,11 +24,12 @@ export function TransportBar({ onToggleMixer, showMixer, onToggleEffects, showEf
   const navigate = useNavigate();
   const project = useProjectStore((s) => s.project);
   const setTempo = useProjectStore((s) => s.setTempo);
-  const { isPlaying, currentTick, play, pause, stop, setCurrentTick } = useTransportStore();
+  const { isPlaying, currentTick, loop, play, pause, stop, setCurrentTick, setLoop, clearLoop } = useTransportStore();
   const canAccess = useSubscriptionStore((s) => s.canAccess);
   const [showHelp, setShowHelp] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [metronomeOn, setMetronomeOn] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -52,16 +54,28 @@ export function TransportBar({ onToggleMixer, showMixer, onToggleEffects, showEf
     await AudioEngine.init();
     if (isPlaying) {
       AudioEngine.pause();
+      Metronome.stop();
       pause();
     } else {
+      // Apply loop if set
+      const currentLoop = useTransportStore.getState().loop;
+      if (currentLoop) {
+        AudioEngine.setLoop(currentLoop.start, currentLoop.end, project.tempo);
+      } else {
+        AudioEngine.clearLoop();
+      }
       AudioEngine.scheduleProject(project);
       AudioEngine.play();
+      if (metronomeOn) {
+        Metronome.start(project.tempo, project.timeSignature);
+      }
       play();
     }
-  }, [project, isPlaying, play, pause]);
+  }, [project, isPlaying, play, pause, metronomeOn]);
 
   const handleStop = useCallback(() => {
     AudioEngine.stop();
+    Metronome.stop();
     stop();
   }, [stop]);
 
@@ -72,6 +86,32 @@ export function TransportBar({ onToggleMixer, showMixer, onToggleEffects, showEf
     },
     [setTempo]
   );
+
+  const handleToggleLoop = useCallback(() => {
+    if (!project) return;
+    if (loop) {
+      clearLoop();
+      AudioEngine.clearLoop();
+    } else {
+      // Default: loop first 4 measures
+      const tpm = ticksPerMeasure(project.timeSignature);
+      const loopEnd = tpm * 4;
+      setLoop(0, loopEnd);
+      AudioEngine.setLoop(0, loopEnd, project.tempo);
+    }
+  }, [project, loop, setLoop, clearLoop]);
+
+  const handleToggleMetronome = useCallback(async () => {
+    if (!project) return;
+    const next = !metronomeOn;
+    setMetronomeOn(next);
+    if (next && isPlaying) {
+      await AudioEngine.init();
+      Metronome.start(project.tempo, project.timeSignature);
+    } else {
+      Metronome.stop();
+    }
+  }, [metronomeOn, isPlaying, project]);
 
   const handleExportJson = useCallback(() => {
     if (!project) return;
@@ -109,7 +149,6 @@ export function TransportBar({ onToggleMixer, showMixer, onToggleEffects, showEf
     const currentProject = useProjectStore.getState().project;
     const restored = useHistoryStore.getState().undo();
     if (restored && currentProject) {
-      // Push current to future
       useHistoryStore.setState((s) => ({
         future: [JSON.stringify(currentProject), ...s.future],
       }));
@@ -121,7 +160,6 @@ export function TransportBar({ onToggleMixer, showMixer, onToggleEffects, showEf
     const currentProject = useProjectStore.getState().project;
     const restored = useHistoryStore.getState().redo();
     if (restored && currentProject) {
-      // Push current to past
       useHistoryStore.setState((s) => ({
         past: [...s.past, JSON.stringify(currentProject)],
       }));
@@ -139,11 +177,27 @@ export function TransportBar({ onToggleMixer, showMixer, onToggleEffects, showEf
           <Button size="sm" variant="secondary" onClick={handleStop}>
             []
           </Button>
-          <Button size="sm" variant="ghost" onClick={handleUndo} disabled={!canUndoVal} title="Undo">
+          <Button size="sm" variant="ghost" onClick={handleUndo} disabled={!canUndoVal} title="Undo (Ctrl+Z)">
             {'<'}
           </Button>
-          <Button size="sm" variant="ghost" onClick={handleRedo} disabled={!canRedoVal} title="Redo">
+          <Button size="sm" variant="ghost" onClick={handleRedo} disabled={!canRedoVal} title="Redo (Ctrl+Y)">
             {'>'}
+          </Button>
+          <Button
+            size="sm"
+            variant={loop ? 'primary' : 'ghost'}
+            onClick={handleToggleLoop}
+            title={loop ? 'Disable loop' : 'Loop first 4 bars'}
+          >
+            Loop
+          </Button>
+          <Button
+            size="sm"
+            variant={metronomeOn ? 'primary' : 'ghost'}
+            onClick={handleToggleMetronome}
+            title={metronomeOn ? 'Metronome off' : 'Metronome on'}
+          >
+            Met
           </Button>
         </div>
 
@@ -234,13 +288,27 @@ export function TransportBar({ onToggleMixer, showMixer, onToggleEffects, showEf
 
       <Modal open={showHelp} onClose={() => setShowHelp(false)} title="Keyboard Shortcuts">
         <div className="space-y-3 text-sm">
-          <h3 className="font-semibold text-forge-accent">Piano Roll</h3>
+          <h3 className="font-semibold text-forge-accent">Global</h3>
+          <div className="grid grid-cols-2 gap-y-1 text-xs">
+            <span className="text-forge-muted">Space</span><span>Play / Pause</span>
+            <span className="text-forge-muted">Ctrl+Z</span><span>Undo</span>
+            <span className="text-forge-muted">Ctrl+Y</span><span>Redo</span>
+            <span className="text-forge-muted">Ctrl+S</span><span>Save</span>
+          </div>
+          <h3 className="font-semibold text-forge-accent mt-4">Piano Roll</h3>
           <div className="grid grid-cols-2 gap-y-1 text-xs">
             <span className="text-forge-muted">Click empty area</span><span>Create note</span>
             <span className="text-forge-muted">Click note</span><span>Select note</span>
+            <span className="text-forge-muted">Shift+Click</span><span>Toggle selection</span>
+            <span className="text-forge-muted">Shift+Drag empty</span><span>Rubber-band select</span>
+            <span className="text-forge-muted">Drag note</span><span>Move note</span>
+            <span className="text-forge-muted">Drag note edge</span><span>Resize note</span>
+            <span className="text-forge-muted">Ctrl+Scroll</span><span>Zoom in/out</span>
+            <span className="text-forge-muted">Ctrl+C / Ctrl+V</span><span>Copy / Paste</span>
+            <span className="text-forge-muted">Ctrl+A</span><span>Select all</span>
             <span className="text-forge-muted">Arrow Up/Down</span><span>Change pitch</span>
             <span className="text-forge-muted">Arrow Left/Right</span><span>Change duration</span>
-            <span className="text-forge-muted">Delete / Backspace</span><span>Remove note</span>
+            <span className="text-forge-muted">Delete / Backspace</span><span>Remove note(s)</span>
           </div>
           <h3 className="font-semibold text-forge-accent mt-4">TabForge</h3>
           <div className="grid grid-cols-2 gap-y-1 text-xs">
