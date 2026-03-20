@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { Sidebar } from './Sidebar';
+import { useAuthSync } from '../core/hooks/useAuthSync';
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  useAuthSync();
 
   return (
     <div className="flex h-screen overflow-hidden">

@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.99.3",
     "@tonejs/midi": "^2.0.28",
     "idb-keyval": "^6.2.2",
     "react": "^18.3.1",

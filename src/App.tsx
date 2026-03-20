@@ -1,7 +1,8 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { useAutoSave } from './core/hooks/useAutoSave';
+import { useAuthStore } from './core/state/auth-store';
 
 // Eager-load landing (first paint)
 import { LandingPage } from './pages/LandingPage';
@@ -65,6 +66,11 @@ function AppRoutes() {
 export default function App() {
   const location = useLocation();
   const isLanding = location.pathname === '/';
+  const initAuth = useAuthStore((s) => s.initialize);
+
+  useEffect(() => {
+    initAuth();
+  }, [initAuth]);
 
   if (isLanding) {
     return (

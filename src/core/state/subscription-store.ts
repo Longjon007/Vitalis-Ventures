@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { fetchProfile } from '../supabase/sync';
 
 export type SubscriptionTier = 'free' | 'pro' | 'studio';
 
@@ -87,6 +88,7 @@ interface SubscriptionState {
   canAccess: (feature: keyof FeatureGate) => boolean;
   isExpired: () => boolean;
   upgradeTo: (tier: SubscriptionTier) => void;
+  syncFromServer: (userId: string) => Promise<void>;
 }
 
 export const useSubscriptionStore = create<SubscriptionState>()(
@@ -123,6 +125,22 @@ export const useSubscriptionStore = create<SubscriptionState>()(
           tier,
           features: TIER_FEATURES[tier],
           expiresAt: tier === 'free' ? null : Date.now() + 365 * 24 * 60 * 60 * 1000,
+        });
+      },
+
+      syncFromServer: async (userId) => {
+        const profile = await fetchProfile(userId);
+        if (!profile) return;
+
+        const tier = (profile.subscriptionTier as SubscriptionTier) || 'free';
+        const expiresAt = profile.subscriptionExpiresAt
+          ? new Date(profile.subscriptionExpiresAt).getTime()
+          : null;
+
+        set({
+          tier,
+          features: TIER_FEATURES[tier],
+          expiresAt,
         });
       },
     }),

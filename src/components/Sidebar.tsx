@@ -1,7 +1,10 @@
+import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useProjectStore } from '../core/state/project-store';
 import { useSubscriptionStore } from '../core/state/subscription-store';
+import { useAuthStore } from '../core/state/auth-store';
 import { LyreLogo } from '../pages/LandingPage';
+import { AuthModal } from './AuthModal';
 
 const NAV_ITEMS = [
   { path: '/', label: 'Home', icon: 'H' },
@@ -27,6 +30,8 @@ export function Sidebar({ onClose }: SidebarProps) {
   const location = useLocation();
   const project = useProjectStore((s) => s.project);
   const tier = useSubscriptionStore((s) => s.tier);
+  const { status: authStatus, user, signOut } = useAuthStore();
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   function handleNav(path: string) {
     navigate(path);
@@ -95,6 +100,32 @@ export function Sidebar({ onClose }: SidebarProps) {
             </p>
           </div>
         )}
+
+        {/* Auth section */}
+        <div className="px-4 py-2 border-t border-forge-border">
+          {authStatus === 'authenticated' && user ? (
+            <div className="flex items-center justify-between">
+              <div className="min-w-0">
+                <p className="text-xs font-medium truncate">{user.email}</p>
+                <p className="text-[10px] text-forge-muted">Cloud sync active</p>
+              </div>
+              <button
+                onClick={() => signOut()}
+                className="text-[10px] text-forge-muted hover:text-forge-text shrink-0 ml-2"
+              >
+                Sign out
+              </button>
+            </div>
+          ) : authStatus === 'guest' ? (
+            <button
+              onClick={() => setShowAuthModal(true)}
+              className="w-full text-left text-xs text-forge-accent hover:text-forge-accent-hover transition-colors"
+            >
+              Sign in to sync projects
+            </button>
+          ) : null}
+        </div>
+
         <div className="px-4 py-2 border-t border-forge-border">
           <span className={`text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded ${
             tier === 'studio'
@@ -107,6 +138,8 @@ export function Sidebar({ onClose }: SidebarProps) {
           </span>
         </div>
       </div>
+
+      {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
     </aside>
   );
 }

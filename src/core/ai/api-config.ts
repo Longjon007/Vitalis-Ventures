@@ -10,6 +10,16 @@ export interface ApiConfig {
 const STORAGE_KEY = 'musicforge-api-config';
 const DEFAULT_BASE_URL = 'https://api.replicate.com/v1';
 
+/**
+ * Build a proxy base URL from VITE_SUPABASE_URL.
+ * E.g., https://abc.supabase.co → https://abc.supabase.co/functions/v1/ai-generate
+ */
+export function getEdgeFunctionUrl(): string | null {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+  if (!supabaseUrl) return null;
+  return `${supabaseUrl}/functions/v1/ai-generate`;
+}
+
 export function getApiConfig(): ApiConfig {
   const stored = localStorage.getItem(STORAGE_KEY);
   if (stored) {
