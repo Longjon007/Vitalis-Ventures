@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { v4 as uuid } from 'uuid';
 import * as Tone from 'tone';
 import { useProjectStore } from '../../core/state/project-store';
+import { useSubscriptionStore } from '../../core/state/subscription-store';
 import { DrumEngine, DrumPattern, DrumSound, ALL_DRUM_SOUNDS, createEmptyPattern, PRESET_PATTERNS } from '../../core/audio/drum-engine';
 import { Button } from '../../components/Button';
+import { UpgradePrompt } from '../../components/UpgradePrompt';
 
 const SOUND_LABELS: Record<DrumSound, string> = {
   kick: 'Kick',
@@ -33,6 +35,7 @@ const SOUND_COLORS: Record<DrumSound, string> = {
 export function DrumSequencer() {
   const navigate = useNavigate();
   const project = useProjectStore((s) => s.project);
+  const canAccess = useSubscriptionStore((s) => s.canAccess);
   const [pattern, setPattern] = useState<DrumPattern>(() => ({
     ...createEmptyPattern(16, project?.tempo ?? 120),
     id: uuid(),
@@ -70,7 +73,6 @@ export function DrumSequencer() {
     } else {
       Tone.getTransport().bpm.value = pattern.bpm;
       DrumEngine.schedulePattern(pattern);
-      // Step tracking
       const stepDuration = (60 / pattern.bpm) / 4;
       let step = 0;
       const interval = setInterval(() => {
@@ -114,6 +116,10 @@ export function DrumSequencer() {
         </div>
       </div>
     );
+  }
+
+  if (!canAccess('drumSequencer')) {
+    return <UpgradePrompt feature="Drum Sequencer" />;
   }
 
   return (
@@ -162,16 +168,16 @@ export function DrumSequencer() {
         </Button>
       </div>
 
-      {/* Grid */}
+      {/* Grid - responsive with horizontal scroll on small screens */}
       <div className="flex-1 overflow-auto p-4">
-        <div className="min-w-max">
+        <div className="min-w-[540px]">
           {/* Step numbers */}
           <div className="flex mb-1">
-            <div className="w-28 shrink-0" />
+            <div className="w-24 sm:w-28 shrink-0" />
             {Array.from({ length: pattern.steps }).map((_, i) => (
               <div
                 key={i}
-                className={`w-9 text-center text-[10px] ${
+                className={`w-7 sm:w-9 text-center text-[10px] ${
                   i % 4 === 0 ? 'text-forge-text font-semibold' : 'text-forge-muted'
                 }`}
               >
@@ -182,7 +188,7 @@ export function DrumSequencer() {
 
           {pattern.tracks.map((track, trackIdx) => (
             <div key={track.sound} className="flex items-center mb-1">
-              <div className="w-28 shrink-0 flex items-center gap-2 pr-2">
+              <div className="w-24 sm:w-28 shrink-0 flex items-center gap-1 sm:gap-2 pr-2">
                 <button
                   onClick={() => previewSound(track.sound)}
                   className="text-[10px] px-1 py-0.5 rounded bg-forge-border text-forge-muted hover:text-forge-text"
@@ -207,7 +213,7 @@ export function DrumSequencer() {
                   <button
                     key={stepIdx}
                     onClick={() => toggleStep(trackIdx, stepIdx)}
-                    className={`w-8 h-8 mx-0.5 rounded transition-all ${
+                    className={`w-6 h-6 sm:w-8 sm:h-8 mx-0.5 rounded transition-all ${
                       isCurrent ? 'ring-1 ring-white/50' : ''
                     } ${
                       active

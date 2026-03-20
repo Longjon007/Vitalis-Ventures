@@ -1,10 +1,12 @@
 import * as Tone from 'tone';
 import { Project } from '../types/project';
 import { ticksToSeconds } from '../utils/timing-utils';
+import { EffectConfig, TrackEffectsChain } from './effects-chain';
 
 type PositionCallback = (tick: number) => void;
 
 let synths: Map<string, Tone.PolySynth> = new Map();
+let effectsChains: Map<string, TrackEffectsChain> = new Map();
 let scheduledEvents: number[] = [];
 let animFrameId: number | null = null;
 let positionCallback: PositionCallback | null = null;
@@ -12,7 +14,8 @@ let positionCallback: PositionCallback | null = null;
 function getSynthForTrack(trackId: string, type: string): Tone.PolySynth {
   if (synths.has(trackId)) return synths.get(trackId)!;
 
-  const synth = new Tone.PolySynth(Tone.Synth).toDestination();
+  // Don't connect to destination yet — effects chain will handle routing
+  const synth = new Tone.PolySynth(Tone.Synth);
 
   switch (type) {
     case 'piano':
@@ -36,6 +39,9 @@ function getSynthForTrack(trackId: string, type: string): Tone.PolySynth {
     default:
       synth.set({ oscillator: { type: 'square' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.4, release: 0.5 } });
   }
+
+  // Default: route directly to destination (effects chain will re-route if effects are applied)
+  synth.toDestination();
 
   synths.set(trackId, synth);
   return synth;
@@ -90,6 +96,37 @@ export const AudioEngine = {
     scheduledEvents = [];
   },
 
+  /** Apply effects chain to a track's synth */
+  setTrackEffects(trackId: string, configs: EffectConfig[]) {
+    const synth = synths.get(trackId);
+    if (!synth) return;
+
+    // Dispose old chain
+    const oldChain = effectsChains.get(trackId);
+    if (oldChain) oldChain.dispose();
+
+    // Create new chain
+    const chain = new TrackEffectsChain(synth);
+    for (const config of configs) {
+      chain.addEffect(config);
+    }
+    effectsChains.set(trackId, chain);
+  },
+
+  clearTrackEffects(trackId: string) {
+    const chain = effectsChains.get(trackId);
+    if (chain) {
+      chain.dispose();
+      effectsChains.delete(trackId);
+      // Re-route synth to destination
+      const synth = synths.get(trackId);
+      if (synth) {
+        try { synth.disconnect(); } catch { /* ok */ }
+        synth.toDestination();
+      }
+    }
+  },
+
   play() {
     Tone.getTransport().start();
     this.startPositionTracking();
@@ -141,6 +178,10 @@ export const AudioEngine = {
   dispose() {
     this.stop();
     this.clearSchedule();
+    for (const chain of effectsChains.values()) {
+      chain.dispose();
+    }
+    effectsChains.clear();
     for (const synth of synths.values()) {
       synth.dispose();
     }

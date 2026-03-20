@@ -1,10 +1,11 @@
-import { useRef, useEffect, useCallback, useState } from 'react';
+import { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import { v4 as uuid } from 'uuid';
 import { Track, NoteEvent } from '../../../core/types/project';
 import { useProjectStore } from '../../../core/state/project-store';
 import { useTransportStore } from '../../../core/state/transport-store';
 import { midiToNoteName, isBlackKey } from '../../../core/utils/note-utils';
 import { TICKS_PER_BEAT } from '../../../core/types/music';
+import { getScaleNotes, isInScale } from '../../../core/types/scales';
 
 const NOTE_HEIGHT = 14;
 const TICK_WIDTH = 0.15;
@@ -27,6 +28,12 @@ export function PianoRoll({ track }: PianoRollProps) {
   const currentTick = useTransportStore((s) => s.currentTick);
   const project = useProjectStore((s) => s.project);
 
+  // Scale highlighting
+  const scaleNotes = useMemo(() => {
+    if (!project) return null;
+    return getScaleNotes(project.key, 'major');
+  }, [project?.key]);
+
   const totalTicks = project
     ? project.timeSignature[0] * TICKS_PER_BEAT * 32
     : TICKS_PER_BEAT * 128;
@@ -42,11 +49,24 @@ export function PianoRoll({ track }: PianoRollProps) {
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Draw pitch rows
+    // Draw pitch rows with scale highlighting
     for (let p = MIN_PITCH; p < MAX_PITCH; p++) {
       const y = (MAX_PITCH - p - 1) * NOTE_HEIGHT;
-      ctx.fillStyle = isBlackKey(p) ? '#151525' : '#1a1a2e';
+      const inScale = scaleNotes ? isInScale(p, scaleNotes) : true;
+
+      if (isBlackKey(p)) {
+        ctx.fillStyle = inScale ? '#1a1a30' : '#111120';
+      } else {
+        ctx.fillStyle = inScale ? '#1e1e38' : '#161628';
+      }
       ctx.fillRect(0, y, canvas.width, NOTE_HEIGHT);
+
+      // Subtle scale indicator stripe on left edge
+      if (scaleNotes && inScale) {
+        ctx.fillStyle = 'rgba(108, 92, 231, 0.08)';
+        ctx.fillRect(0, y, canvas.width, NOTE_HEIGHT);
+      }
+
       ctx.strokeStyle = '#222240';
       ctx.lineWidth = 0.5;
       ctx.beginPath();
@@ -74,8 +94,15 @@ export function PianoRoll({ track }: PianoRollProps) {
       const y = (MAX_PITCH - note.pitch - 1) * NOTE_HEIGHT;
       const w = note.durationTicks * TICK_WIDTH;
       const isSelected = note.id === selectedNoteId;
+      const noteInScale = scaleNotes ? isInScale(note.pitch, scaleNotes) : true;
 
-      ctx.fillStyle = isSelected ? '#8b7cf8' : track.instrument.color;
+      // Notes outside scale get a dimmer, reddish tint
+      if (!noteInScale) {
+        ctx.fillStyle = isSelected ? '#c06060' : '#884444';
+      } else {
+        ctx.fillStyle = isSelected ? '#8b7cf8' : track.instrument.color;
+      }
+
       ctx.globalAlpha = 0.85;
       ctx.beginPath();
       ctx.roundRect(x, y + 1, Math.max(w, 4), NOTE_HEIGHT - 2, 2);
@@ -105,7 +132,7 @@ export function PianoRoll({ track }: PianoRollProps) {
     ctx.moveTo(playheadX, 0);
     ctx.lineTo(playheadX, canvas.height);
     ctx.stroke();
-  }, [track, selectedNoteId, currentTick, totalTicks, project]);
+  }, [track, selectedNoteId, currentTick, totalTicks, project, scaleNotes]);
 
   useEffect(() => {
     draw();
@@ -196,9 +223,10 @@ export function PianoRoll({ track }: PianoRollProps) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedNoteId, track, removeNote, updateNote]);
 
-  // Piano key labels
+  // Piano key labels with scale indicators
   const pianoKeys = [];
   for (let p = MAX_PITCH - 1; p >= MIN_PITCH; p--) {
+    const inScale = scaleNotes ? isInScale(p, scaleNotes) : true;
     pianoKeys.push(
       <div
         key={p}
@@ -207,6 +235,9 @@ export function PianoRoll({ track }: PianoRollProps) {
         }`}
         style={{ height: NOTE_HEIGHT }}
       >
+        {inScale && scaleNotes && (
+          <span className="w-1 h-1 rounded-full bg-forge-accent mr-1 shrink-0" />
+        )}
         {p % 12 === 0 ? midiToNoteName(p) : ''}
       </div>
     );

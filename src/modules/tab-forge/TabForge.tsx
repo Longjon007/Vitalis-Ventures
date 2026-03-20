@@ -4,6 +4,9 @@ import { v4 as uuid } from 'uuid';
 import { useProjectStore } from '../../core/state/project-store';
 import { TabPosition, STRING_LABELS, STANDARD_TUNING, TUNING_PRESETS } from '../../core/types/tab';
 import { NOTE_DURATION_TICKS } from '../../core/types/music';
+import { INSTRUMENTS } from '../../core/types/instrument';
+import { NoteEvent } from '../../core/types/project';
+import { tabPositionToNotes } from '../../core/utils/chord-utils';
 import { TabGrid } from './components/TabGrid';
 import { ChordLibrary } from './components/ChordLibrary';
 import { TabToolbar } from './components/TabToolbar';
@@ -83,6 +86,37 @@ export function TabForge() {
     const preset = TUNING_PRESETS[tuningKey];
     if (preset) setTuning(preset.tuning);
   }, []);
+
+  const addTrack = useProjectStore((s) => s.addTrack);
+  const updateTrackNotes = useProjectStore((s) => s.updateTrackNotes);
+
+  const syncToMusicForge = useCallback(() => {
+    if (!project) return;
+    // Convert all tab positions to NoteEvents
+    const allNotes: NoteEvent[] = [];
+    for (const pos of positions) {
+      const notes = tabPositionToNotes(pos, tuning);
+      allNotes.push(...notes);
+    }
+    if (allNotes.length === 0) return;
+
+    // Find existing guitar track or create one
+    let guitarTrack = project.tracks.find(
+      (t) => t.instrument.type === 'guitar'
+    );
+    if (guitarTrack) {
+      updateTrackNotes(guitarTrack.id, allNotes);
+    } else {
+      addTrack('Guitar (Tab)', INSTRUMENTS.guitar);
+      // Get the newly added track
+      const updated = useProjectStore.getState().project;
+      const newTrack = updated?.tracks[updated.tracks.length - 1];
+      if (newTrack) {
+        updateTrackNotes(newTrack.id, allNotes);
+      }
+    }
+    navigate('/music');
+  }, [project, positions, tuning, addTrack, updateTrackNotes, navigate]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -184,8 +218,13 @@ export function TabForge() {
             beatsPerMeasure={project.timeSignature[0]}
           />
 
-          <div className="mt-4 text-xs text-forge-muted">
-            <p>Arrow keys: Navigate | Number keys: Enter fret | Delete: Clear | Click: Select cell</p>
+          <div className="mt-4 flex items-center gap-4">
+            <p className="text-xs text-forge-muted">
+              Arrow keys: Navigate | Number keys: Enter fret | Delete: Clear
+            </p>
+            <Button size="sm" variant="secondary" onClick={syncToMusicForge}>
+              Sync to MusicForge
+            </Button>
           </div>
         </div>
 

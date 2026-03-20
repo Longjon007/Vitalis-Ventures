@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { EffectType, DEFAULT_EFFECT_PARAMS, EffectConfig } from '../../../core/audio/effects-chain';
-import { Button } from '../../../components/Button';
+import { AudioEngine } from '../../../core/audio/audio-engine';
 
 interface EffectsPanelProps {
   trackId: string;
@@ -25,6 +25,23 @@ export function EffectsPanel({ trackId, trackName, onClose }: EffectsPanelProps)
       params: { ...DEFAULT_EFFECT_PARAMS[type] },
     }))
   );
+
+  // Apply effects to audio engine whenever they change
+  useEffect(() => {
+    const enabledEffects = effects.filter((e) => e.enabled);
+    if (enabledEffects.length > 0) {
+      AudioEngine.setTrackEffects(trackId, enabledEffects);
+    } else {
+      AudioEngine.clearTrackEffects(trackId);
+    }
+  }, [effects, trackId]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      AudioEngine.clearTrackEffects(trackId);
+    };
+  }, [trackId]);
 
   const toggleEffect = (type: EffectType) => {
     setEffects((prev) =>

@@ -1,6 +1,7 @@
 import { useEffect, useCallback, useState, useRef } from 'react';
 import { useProjectStore } from '../../../core/state/project-store';
 import { useTransportStore } from '../../../core/state/transport-store';
+import { useSubscriptionStore } from '../../../core/state/subscription-store';
 import { AudioEngine } from '../../../core/audio/audio-engine';
 import { formatPosition } from '../../../core/utils/timing-utils';
 import { downloadMidiJson } from '../../../core/export/midi-json-exporter';
@@ -20,6 +21,7 @@ export function TransportBar({ onToggleMixer, showMixer, onToggleEffects, showEf
   const project = useProjectStore((s) => s.project);
   const setTempo = useProjectStore((s) => s.setTempo);
   const { isPlaying, currentTick, play, pause, stop, setCurrentTick } = useTransportStore();
+  const canAccess = useSubscriptionStore((s) => s.canAccess);
   const [showHelp, setShowHelp] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -31,7 +33,6 @@ export function TransportBar({ onToggleMixer, showMixer, onToggleEffects, showEf
     });
   }, [setCurrentTick]);
 
-  // Close export dropdown on outside click
   useEffect(() => {
     if (!showExport) return;
     const handleClick = (e: MouseEvent) => {
@@ -94,6 +95,10 @@ export function TransportBar({ onToggleMixer, showMixer, onToggleEffects, showEf
 
   if (!project) return null;
 
+  const canMidi = canAccess('midiExport');
+  const canWav = canAccess('wavExport');
+  const canEffects = canAccess('effectsChain');
+
   return (
     <>
       <div className="flex items-center gap-3 px-4 py-2 bg-forge-surface border-b border-forge-border shrink-0 flex-wrap">
@@ -138,7 +143,9 @@ export function TransportBar({ onToggleMixer, showMixer, onToggleEffects, showEf
             <Button
               size="sm"
               variant={showEffects ? 'primary' : 'ghost'}
-              onClick={onToggleEffects}
+              onClick={canEffects ? onToggleEffects : undefined}
+              disabled={!canEffects}
+              title={!canEffects ? 'Effects require Pro plan' : undefined}
             >
               FX
             </Button>
@@ -150,7 +157,7 @@ export function TransportBar({ onToggleMixer, showMixer, onToggleEffects, showEf
               {exporting ? 'Exporting...' : 'Export'}
             </Button>
             {showExport && (
-              <div className="absolute right-0 top-full mt-1 bg-forge-surface border border-forge-border rounded-lg shadow-lg py-1 z-50 min-w-[160px]">
+              <div className="absolute right-0 top-full mt-1 bg-forge-surface border border-forge-border rounded-lg shadow-lg py-1 z-50 min-w-[180px]">
                 <button
                   onClick={handleExportJson}
                   className="w-full text-left px-4 py-2 text-sm hover:bg-white/5 transition-colors"
@@ -158,17 +165,18 @@ export function TransportBar({ onToggleMixer, showMixer, onToggleEffects, showEf
                   JSON (Project)
                 </button>
                 <button
-                  onClick={handleExportMidi}
-                  className="w-full text-left px-4 py-2 text-sm hover:bg-white/5 transition-colors"
+                  onClick={canMidi ? handleExportMidi : undefined}
+                  disabled={!canMidi}
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-white/5 transition-colors disabled:opacity-40"
                 >
-                  MIDI File
+                  MIDI File {!canMidi && <span className="text-[10px] text-forge-accent ml-1">Pro</span>}
                 </button>
                 <button
-                  onClick={handleExportWav}
-                  disabled={exporting}
-                  className="w-full text-left px-4 py-2 text-sm hover:bg-white/5 transition-colors disabled:opacity-50"
+                  onClick={canWav ? handleExportWav : undefined}
+                  disabled={!canWav || exporting}
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-white/5 transition-colors disabled:opacity-40"
                 >
-                  Audio (WebM)
+                  Audio (WebM) {!canWav && <span className="text-[10px] text-forge-accent ml-1">Pro</span>}
                 </button>
               </div>
             )}
@@ -196,11 +204,9 @@ export function TransportBar({ onToggleMixer, showMixer, onToggleEffects, showEf
             <span className="text-forge-muted">0-9</span><span>Enter fret number</span>
             <span className="text-forge-muted">Delete / Backspace</span><span>Clear cell</span>
           </div>
-          <h3 className="font-semibold text-forge-accent mt-4">Drum Sequencer</h3>
-          <div className="grid grid-cols-2 gap-y-1 text-xs">
-            <span className="text-forge-muted">Click cell</span><span>Toggle step</span>
-            <span className="text-forge-muted">M button</span><span>Mute track</span>
-            <span className="text-forge-muted">{'|>'} button</span><span>Preview sound</span>
+          <h3 className="font-semibold text-forge-accent mt-4">Scale Highlighting</h3>
+          <div className="text-xs text-forge-muted">
+            <p>Piano roll rows are highlighted based on your project key. Brighter rows = in scale. Notes outside the scale appear reddish.</p>
           </div>
         </div>
       </Modal>

@@ -1,5 +1,6 @@
 import { useProjectStore } from '../../../core/state/project-store';
 import { useUIStore } from '../../../core/state/ui-store';
+import { useSubscriptionStore } from '../../../core/state/subscription-store';
 import { INSTRUMENTS } from '../../../core/types/instrument';
 import { Button } from '../../../components/Button';
 
@@ -10,8 +11,11 @@ export function TrackList() {
   const removeTrack = useProjectStore((s) => s.removeTrack);
   const selectedTrackId = useUIStore((s) => s.selectedTrackId);
   const setSelectedTrackId = useUIStore((s) => s.setSelectedTrackId);
+  const features = useSubscriptionStore((s) => s.features);
 
   if (!project) return null;
+
+  const atTrackLimit = project.tracks.length >= features.maxTracksPerProject;
 
   return (
     <div className="w-52 bg-forge-surface border-r border-forge-border flex flex-col shrink-0">
@@ -20,11 +24,21 @@ export function TrackList() {
         <Button
           size="sm"
           variant="ghost"
+          disabled={atTrackLimit}
+          title={atTrackLimit ? `Max ${features.maxTracksPerProject} tracks on your plan` : 'Add track'}
           onClick={() => addTrack(`Track ${project.tracks.length + 1}`, INSTRUMENTS.synth)}
         >
           +
         </Button>
       </div>
+
+      {atTrackLimit && features.maxTracksPerProject < Infinity && (
+        <div className="px-3 py-1.5 bg-forge-accent/5 border-b border-forge-border">
+          <p className="text-[10px] text-forge-accent">
+            Track limit reached ({features.maxTracksPerProject}). Upgrade for unlimited.
+          </p>
+        </div>
+      )}
 
       <div className="flex-1 overflow-auto">
         {project.tracks.map((track) => {
