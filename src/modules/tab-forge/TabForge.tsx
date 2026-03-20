@@ -150,7 +150,7 @@ export function TabForge() {
           <h2 className="text-xl font-semibold mb-2">No Project Loaded</h2>
           <p className="text-forge-muted mb-4">Create a project first using the App Builder.</p>
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/builder')}
             className="px-4 py-2 bg-forge-accent rounded-lg text-sm"
           >
             Go to Builder

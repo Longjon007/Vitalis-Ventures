@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { CHORD_SHAPES, ChordShape } from '../data/chord-shapes';
+import { ChordDiagram } from './ChordDiagram';
 
 interface ChordLibraryProps {
   onSelectChord: (frets: (number | null)[]) => void;
@@ -68,12 +69,10 @@ function ChordCard({ chord, onSelect }: { chord: ChordShape; onSelect: () => voi
   return (
     <button
       onClick={onSelect}
-      className="p-2 bg-forge-bg border border-forge-border rounded-lg hover:border-forge-accent transition-colors text-left"
+      className="p-2 bg-forge-bg border border-forge-border rounded-lg hover:border-forge-accent transition-colors text-left flex flex-col items-center"
     >
-      <div className="text-sm font-semibold mb-1">{chord.name}</div>
-      <div className="text-[10px] font-mono text-forge-muted">
-        {chord.frets.map((f) => (f === null ? 'x' : f)).join(' ')}
-      </div>
+      <div className="text-sm font-semibold mb-0.5">{chord.name}</div>
+      <ChordDiagram frets={chord.frets} size={70} />
     </button>
   );
 }
