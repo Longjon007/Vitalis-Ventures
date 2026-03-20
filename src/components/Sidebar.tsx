@@ -1,6 +1,7 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useProjectStore } from '../core/state/project-store';
 import { useSubscriptionStore } from '../core/state/subscription-store';
+import { LyreLogo } from '../pages/LandingPage';
 
 const NAV_ITEMS = [
   { path: '/', label: 'Home', icon: 'H' },
@@ -56,9 +57,14 @@ export function Sidebar({ onClose }: SidebarProps) {
   return (
     <aside className="w-56 h-full bg-forge-surface border-r border-forge-border flex flex-col shrink-0">
       <div className="p-4 border-b border-forge-border flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-bold text-forge-accent">MusicForge</h1>
-          <p className="text-xs text-forge-muted mt-1">+ TabForge</p>
+        <div className="flex items-center gap-2">
+          <LyreLogo className="w-8 h-8 shrink-0" />
+          <div className="min-w-0">
+            <h1 className="text-sm font-bold bg-gradient-to-r from-[#d4a853] to-[#b8860b] bg-clip-text text-transparent truncate">
+              Vitalis Ventures
+            </h1>
+            <p className="text-[10px] text-forge-muted">MusicForge + TabForge</p>
+          </div>
         </div>
         <button
           onClick={onClose}
