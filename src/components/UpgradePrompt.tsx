@@ -1,25 +1,55 @@
-import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from './Button';
+import { trackEvent } from '../core/analytics/tracker';
 
 interface UpgradePromptProps {
   feature: string;
   requiredTier?: string;
+  ctaPath?: string;
 }
 
-export function UpgradePrompt({ feature, requiredTier = 'Pro' }: UpgradePromptProps) {
+export function UpgradePrompt({ feature, requiredTier = 'Pro', ctaPath = '/pricing' }: UpgradePromptProps) {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    trackEvent('upgrade_prompt_viewed', {
+      feature,
+      requiredTier,
+      path: location.pathname,
+    });
+  }, [feature, requiredTier, location.pathname]);
+
+  function handleClick() {
+    trackEvent('upgrade_prompt_clicked', {
+      feature,
+      requiredTier,
+      path: location.pathname,
+      targetPath: ctaPath,
+    });
+    navigate(ctaPath);
+  }
 
   return (
     <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
       <div className="w-12 h-12 rounded-full bg-forge-accent/10 flex items-center justify-center mb-3">
         <span className="text-forge-accent text-xl">$</span>
       </div>
-      <h3 className="font-semibold text-sm mb-1">{feature} requires {requiredTier}</h3>
-      <p className="text-xs text-forge-muted mb-4 max-w-xs">
-        Upgrade your plan to unlock this feature and more.
+      <h3 className="font-semibold text-sm mb-1">You are low on credits</h3>
+      <p className="text-xs text-forge-muted mb-3 max-w-xs">
+        Upgrade to continue generating AI music tracks and keep your projects moving.
       </p>
-      <Button size="sm" variant="primary" onClick={() => navigate('/pricing')}>
-        View Plans
+      <ul className="text-xs text-forge-muted space-y-1 mb-3">
+        <li>More monthly credits</li>
+        <li>Longer generation lengths</li>
+        <li>Faster workflow with fewer interruptions</li>
+      </ul>
+      <p className="text-[11px] text-forge-muted mb-4">
+        Recommended for {feature}: <span className="text-forge-accent font-medium">{requiredTier}</span>
+      </p>
+      <Button size="sm" variant="primary" onClick={handleClick}>
+        Upgrade Now
       </Button>
     </div>
   );

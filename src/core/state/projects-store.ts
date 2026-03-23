@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { get as idbGet, set as idbSet, del as idbDel, keys as idbKeys } from 'idb-keyval';
+import { v4 as uuid } from 'uuid';
 import { Project } from '../types/project';
 
 interface ProjectMeta {
@@ -73,7 +74,6 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
   duplicateProject: async (id, newName) => {
     const original = await get().loadProject(id);
     if (!original) return null;
-    const { v4: uuid } = await import('uuid');
     const duplicate: Project = {
       ...original,
       id: uuid(),

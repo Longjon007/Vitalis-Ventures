@@ -6,7 +6,7 @@ import { TimeSignature } from '../types/music';
 interface CloudProject {
   id: string;
   user_id: string;
-  name: string;
+  title: string;
   tempo: number;
   time_signature: [number, number]; // stored as JSON array
   key: string;
@@ -18,7 +18,7 @@ interface CloudProject {
 function cloudToLocal(cp: CloudProject): Project {
   return {
     id: cp.id,
-    name: cp.name,
+    name: cp.title,
     tempo: cp.tempo,
     timeSignature: cp.time_signature as TimeSignature,
     key: cp.key,
@@ -32,7 +32,7 @@ function localToCloud(p: Project, userId: string): Omit<CloudProject, 'created_a
   return {
     id: p.id,
     user_id: userId,
-    name: p.name,
+    title: p.name,
     tempo: p.tempo,
     time_signature: p.timeSignature,
     key: p.key,

@@ -3,43 +3,55 @@ import { Button } from '../components/Button';
 
 const FEATURES = [
   {
-    title: 'MusicForge',
+    title: 'Generate Faster',
     description:
-      'Multi-track composition with a canvas-based piano roll editor. Place notes, adjust pitch and duration, and hear your music in real time with our Tone.js audio engine.',
-    icon: 'M',
+      'Create AI music tracks in seconds so you can move from idea to draft without breaking your flow.',
+    icon: 'S',
     color: '#6c5ce7',
-    highlights: ['Piano roll editor', 'Multi-track mixing', 'Real-time playback', 'MIDI & audio export'],
+    highlights: ['Prompt-based generation', 'Quick status updates', 'Designed for rapid iteration'],
   },
   {
-    title: 'TabForge',
+    title: 'Control the Output',
     description:
-      'Guitar tablature editor with keyboard-driven input. Navigate a 6-string grid, insert chords from the built-in library, and export to standard ASCII tab format.',
-    icon: 'T',
+      'Shape each generation with prompt details and parameters like genre, BPM, key signature, mode, and duration.',
+    icon: 'C',
     color: '#00b894',
-    highlights: ['6-string tab grid', '30+ chord shapes', 'Multiple tunings', 'Tab text export'],
+    highlights: ['Prompt + parameters', 'Multiple generation modes', 'Credits-aware workflow'],
   },
   {
-    title: 'Drum Sequencer',
+    title: 'Stay Organized',
     description:
-      '16-step drum machine with 9 synthesized sounds. Load preset patterns or build your own beats from scratch with per-track mute and volume control.',
-    icon: 'D',
+      'Keep your AI music work in one place with projects and generation history you can revisit and reuse.',
+    icon: 'O',
     color: '#e17055',
-    highlights: ['9 drum sounds', '16-step grid', 'Preset patterns', 'Per-track controls'],
+    highlights: ['Project-based workflow', 'Generation history', 'Clear status visibility'],
   },
   {
-    title: 'ForgeAI',
+    title: 'Built to Monetize',
     description:
-      'AI-powered music generation engine. Describe the music you want and get full tracks, stems, or instrumentals imported directly into your project.',
-    icon: '*',
+      'Move from free exploration to paid creation smoothly with credits, subscriptions, and billing controls in-app.',
+    icon: '$',
     color: '#d4a853',
-    highlights: ['Text-to-music generation', 'Stem separation', 'Multi-track import', 'Style control'],
+    highlights: ['Stripe subscriptions', 'Credits reset monthly', 'Upgrade any time'],
   },
 ];
 
 const STEPS = [
-  { number: '01', title: 'Pick a Template', description: 'Choose from presets like Rock Band, Orchestra, or start blank.' },
-  { number: '02', title: 'Compose & Tab', description: 'Use MusicForge for multi-track composition or TabForge for guitar tabs.' },
-  { number: '03', title: 'Export & Share', description: 'Download as MIDI, audio, or ASCII tab. Your music, your way.' },
+  {
+    number: '01',
+    title: 'Write a Prompt',
+    description: 'Describe the style, mood, and energy for the track you want to generate.',
+  },
+  {
+    number: '02',
+    title: 'Generate a Track',
+    description: 'Run AI generation with your settings and watch status update in real time.',
+  },
+  {
+    number: '03',
+    title: 'Save to Projects',
+    description: 'Keep your generated tracks organized in projects and revisit them anytime.',
+  },
 ];
 
 function LyreLogo({ className }: { className?: string }) {
@@ -76,26 +88,23 @@ export function LandingPage() {
           <LyreLogo className="w-9 h-9" />
           <div>
             <span className="font-bold text-lg bg-gradient-to-r from-[#d4a853] to-[#b8860b] bg-clip-text text-transparent">
-              Vitalis Ventures
+              MusicForge
             </span>
-            <span className="text-forge-muted text-xs ml-2">MusicForge + TabForge</span>
+            <span className="text-forge-muted text-xs ml-2">AI Music Creation Workspace</span>
           </div>
         </div>
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" onClick={() => navigate('/builder')}>
-            Builder
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => navigate('/music')}>
-            MusicForge
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => navigate('/tab')}>
-            TabForge
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => navigate('/ai')}>
-            ForgeAI
+            Product
           </Button>
           <Button variant="ghost" size="sm" onClick={() => navigate('/pricing')}>
             Pricing
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => navigate('/login')}>
+            Log In
+          </Button>
+          <Button size="sm" onClick={() => navigate('/signup')}>
+            Start Creating Free
           </Button>
         </div>
       </nav>
@@ -108,37 +117,43 @@ export function LandingPage() {
         <div className="relative max-w-3xl mx-auto">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#d4a853]/10 border border-[#d4a853]/20 text-[#d4a853] text-xs font-medium mb-6">
             <span className="w-1.5 h-1.5 rounded-full bg-[#d4a853] animate-pulse" />
-            A Vitalis Ventures Product
+            Built for creators
           </div>
 
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight mb-6">
             <span className="bg-gradient-to-r from-[#d4a853] via-forge-accent to-forge-success bg-clip-text text-transparent">
-              Compose. Tab. Create.
+              Create original AI music tracks faster
             </span>
           </h1>
 
           <p className="text-lg sm:text-xl text-forge-muted max-w-2xl mx-auto mb-10 leading-relaxed">
-            A complete music workstation in your browser. Multi-track composition, guitar tablature,
-            drum sequencing, AI-powered music generation, effects processing, and MIDI export.
+            Generate tracks, manage projects, and track generation history in one workspace.
+            Start free with monthly credits and upgrade when you need more creation capacity.
           </p>
 
-          <div className="flex items-center justify-center gap-4">
-            <Button size="lg" onClick={() => navigate('/builder')}>
-              Get Started
+          <div className="flex items-center justify-center gap-4 flex-wrap">
+            <Button size="lg" onClick={() => navigate('/signup')}>
+              Start Creating Free
             </Button>
-            <Button variant="secondary" size="lg" onClick={() => navigate('/music')}>
-              Open MusicForge
+            <Button variant="secondary" size="lg" onClick={() => navigate('/pricing')}>
+              View Plans
             </Button>
           </div>
+          <p className="mt-4 text-sm text-forge-muted">
+            Already have an account?{' '}
+            <button className="text-forge-accent hover:underline" onClick={() => navigate('/login')}>
+              Log in
+            </button>
+          </p>
         </div>
       </section>
 
       {/* Features */}
       <section className="px-6 py-20 max-w-7xl mx-auto">
         <div className="text-center mb-14">
-          <h2 className="text-3xl sm:text-4xl font-bold mb-3">Everything You Need</h2>
+          <h2 className="text-3xl sm:text-4xl font-bold mb-3">Why creators use MusicForge</h2>
           <p className="text-forge-muted text-lg max-w-xl mx-auto">
-            Four powerful tools, one seamless workflow.
+            Everything needed to move from idea to generated track without losing momentum.
           </p>
         </div>
 
@@ -174,7 +189,7 @@ export function LandingPage() {
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-14">
             <h2 className="text-3xl sm:text-4xl font-bold mb-3">How It Works</h2>
-            <p className="text-forge-muted text-lg">Three steps to your next track.</p>
+            <p className="text-forge-muted text-lg">From prompt to project in three steps.</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
@@ -189,16 +204,36 @@ export function LandingPage() {
         </div>
       </section>
 
+      {/* Credibility */}
+      <section className="px-6 py-16 border-t border-forge-border">
+        <div className="max-w-5xl mx-auto grid gap-6 md:grid-cols-2">
+          <div className="rounded-2xl border border-forge-border bg-forge-surface p-6">
+            <h3 className="text-lg font-semibold mb-2">Built for creators</h3>
+            <p className="text-sm text-forge-muted">
+              MusicForge is designed for repeat creation sessions, not one-off AI outputs.
+              Keep projects organized while generating tracks with clear status and history.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-forge-border bg-forge-surface p-6">
+            <h3 className="text-lg font-semibold mb-2">Designed for rapid iteration</h3>
+            <p className="text-sm text-forge-muted">
+              Prompt, generate, evaluate, and regenerate quickly. Credits and plan controls are
+              built into the same workflow so scaling your usage is straightforward.
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* CTA */}
       <section className="px-6 py-20">
         <div className="max-w-3xl mx-auto text-center bg-gradient-to-br from-[#d4a853]/10 to-forge-accent/5 border border-forge-border rounded-2xl p-10">
-          <h2 className="text-2xl sm:text-3xl font-bold mb-3">Ready to Make Music?</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold mb-3">Start creating AI music for free</h2>
           <p className="text-forge-muted mb-6">
-            No sign-up required. Your projects save locally in the browser.
+            Free plan includes monthly credits so you can generate tracks, build projects, and upgrade anytime.
           </p>
           <div className="flex items-center justify-center gap-4">
-            <Button size="lg" onClick={() => navigate('/builder')}>
-              Launch App Builder
+            <Button size="lg" onClick={() => navigate('/signup')}>
+              Generate Your First Track
             </Button>
             <Button variant="secondary" size="lg" onClick={() => navigate('/pricing')}>
               View Plans
@@ -213,31 +248,22 @@ export function LandingPage() {
           <div className="flex items-center gap-2">
             <LyreLogo className="w-6 h-6" />
             <span className="text-sm bg-gradient-to-r from-[#d4a853] to-[#b8860b] bg-clip-text text-transparent font-semibold">
-              Vitalis Ventures LLC
+              MusicForge
             </span>
-            <span className="text-xs text-forge-muted">| MusicForge + TabForge</span>
+            <span className="text-xs text-forge-muted">| AI music generation workspace</span>
           </div>
           <div className="flex items-center gap-4 text-xs text-forge-muted">
-            <button onClick={() => navigate('/builder')} className="hover:text-forge-text transition-colors">
-              Builder
+            <button onClick={() => navigate('/pricing')} className="hover:text-forge-text transition-colors">
+              Pricing
             </button>
-            <button onClick={() => navigate('/music')} className="hover:text-forge-text transition-colors">
-              MusicForge
+            <button onClick={() => navigate('/signup')} className="hover:text-forge-text transition-colors">
+              Sign Up
             </button>
-            <button onClick={() => navigate('/tab')} className="hover:text-forge-text transition-colors">
-              TabForge
-            </button>
-            <button onClick={() => navigate('/drums')} className="hover:text-forge-text transition-colors">
-              Drums
-            </button>
-            <button onClick={() => navigate('/ai')} className="hover:text-forge-text transition-colors">
-              ForgeAI
-            </button>
-            <button onClick={() => navigate('/store')} className="hover:text-forge-text transition-colors">
-              Store
+            <button onClick={() => navigate('/login')} className="hover:text-forge-text transition-colors">
+              Log In
             </button>
           </div>
-          <p className="text-xs text-forge-muted">Built with React, Tone.js & Tailwind</p>
+          <p className="text-xs text-forge-muted">Built with React, Supabase, Stripe, and Replicate</p>
         </div>
       </footer>
     </div>

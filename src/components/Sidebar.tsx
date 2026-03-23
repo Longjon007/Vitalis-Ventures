@@ -1,10 +1,8 @@
-import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useProjectStore } from '../core/state/project-store';
 import { useSubscriptionStore } from '../core/state/subscription-store';
 import { useAuthStore } from '../core/state/auth-store';
 import { LyreLogo } from '../pages/LandingPage';
-import { AuthModal } from './AuthModal';
 
 const NAV_ITEMS = [
   { path: '/', label: 'Home', icon: 'H' },
@@ -31,7 +29,6 @@ export function Sidebar({ onClose }: SidebarProps) {
   const project = useProjectStore((s) => s.project);
   const tier = useSubscriptionStore((s) => s.tier);
   const { status: authStatus, user, signOut } = useAuthStore();
-  const [showAuthModal, setShowAuthModal] = useState(false);
 
   function handleNav(path: string) {
     navigate(path);
@@ -118,7 +115,7 @@ export function Sidebar({ onClose }: SidebarProps) {
             </div>
           ) : authStatus === 'guest' ? (
             <button
-              onClick={() => setShowAuthModal(true)}
+              onClick={() => navigate('/login')}
               className="w-full text-left text-xs text-forge-accent hover:text-forge-accent-hover transition-colors"
             >
               Sign in to sync projects
@@ -139,7 +136,6 @@ export function Sidebar({ onClose }: SidebarProps) {
         </div>
       </div>
 
-      {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
     </aside>
   );
 }

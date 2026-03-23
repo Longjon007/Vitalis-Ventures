@@ -1,6 +1,7 @@
 -- ============================================================
--- MusicForge Supabase Schema
--- Run this in the Supabase SQL Editor to set up the database
+-- MusicForge Supabase Schema (reference copy)
+-- The authoritative schema lives in supabase/migrations/.
+-- This file is kept in sync for quick reference only.
 -- ============================================================
 
 -- Enable UUID extension
@@ -14,13 +15,19 @@ create table if not exists public.profiles (
   display_name text,
   avatar_url text,
   subscription_tier text not null default 'free' check (subscription_tier in ('free', 'pro', 'studio')),
+  subscription_status text,
   stripe_customer_id text unique,
+  stripe_subscription_id text,
   subscription_expires_at timestamptz,
+  billing_updated_at timestamptz,
   ai_generations_used integer not null default 0,
   ai_generations_reset_at timestamptz not null default (date_trunc('month', now()) + interval '1 month'),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+create index if not exists idx_profiles_stripe_customer_id on public.profiles(stripe_customer_id);
+create index if not exists idx_profiles_stripe_subscription_id on public.profiles(stripe_subscription_id);
 
 -- Auto-create profile on user signup
 create or replace function public.handle_new_user()
@@ -47,7 +54,12 @@ create trigger on_auth_user_created
 create table if not exists public.projects (
   id uuid primary key default uuid_generate_v4(),
   user_id uuid references public.profiles(id) on delete cascade not null,
-  name text not null,
+  title text not null,
+  description text,
+  bpm integer,
+  genre text,
+  mood text,
+  status text not null default 'draft',
   tempo integer not null default 120,
   time_signature jsonb not null default '[4, 4]',
   key text not null default 'C major',
@@ -66,15 +78,33 @@ create table if not exists public.ai_generations (
   id uuid primary key default uuid_generate_v4(),
   user_id uuid references public.profiles(id) on delete cascade not null,
   prompt text not null,
-  model text not null default 'musicgen',
+  model text default 'musicgen',
   duration integer not null default 15,
   audio_url text,
   stems jsonb,
   status text not null default 'pending',
-  created_at timestamptz not null default now()
+  project_id uuid references public.projects(id) on delete set null,
+  mode text not null default 'standard',
+  provider text default 'replicate',
+  input_params jsonb not null default '{}'::jsonb,
+  output_url text,
+  preview_url text,
+  error_message text,
+  credits_used integer not null default 0,
+  is_favorite boolean not null default false,
+  is_public boolean not null default true,
+  is_featured boolean not null default false,
+  play_count integer not null default 0,
+  like_count integer not null default 0,
+  share_count integer not null default 0,
+  parent_generation_id uuid references public.ai_generations(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
 create index if not exists idx_ai_generations_user_id on public.ai_generations(user_id);
+create index if not exists idx_ai_generations_status on public.ai_generations(status);
+create index if not exists idx_ai_generations_public_created_at on public.ai_generations(is_public, created_at desc);
 
 -- ============================================================
 -- Row Level Security

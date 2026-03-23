@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User, Session, AuthError } from '@supabase/supabase-js';
 import { getSupabase, isSupabaseConfigured } from '../supabase/client';
+import { applyPendingReferralForCurrentUser } from '../referrals/referral';
 
 export type AuthStatus = 'loading' | 'authenticated' | 'guest';
 
@@ -47,6 +48,7 @@ export const useAuthStore = create<AuthState>()(
           const { data: { session } } = await supabase.auth.getSession();
           if (session) {
             set({ status: 'authenticated', user: session.user, session, error: null });
+            void applyPendingReferralForCurrentUser();
           } else {
             set({ status: 'guest', user: null, session: null });
           }
@@ -55,6 +57,7 @@ export const useAuthStore = create<AuthState>()(
           supabase.auth.onAuthStateChange((_event, session) => {
             if (session) {
               set({ status: 'authenticated', user: session.user, session, error: null });
+              void applyPendingReferralForCurrentUser();
             } else {
               set({ status: 'guest', user: null, session: null });
             }

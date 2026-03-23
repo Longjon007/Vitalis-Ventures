@@ -1,0 +1,20 @@
+[project]
+id = ""  # Fill with your Supabase project ref (e.g., "abcdefghijklmnop")
+
+[api]
+port = 54321
+schemas = ["public"]
+
+[auth]
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["http://localhost:5173/builder"]
+jwt_expiry = 3600
+enable_signup = true
+
+[auth.external.google]
+enabled = false
+# client_id = ""
+# secret = ""
+
+[functions]
+verify_jwt = false  # Edge functions handle their own auth

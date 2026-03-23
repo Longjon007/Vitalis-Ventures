@@ -1,8 +1,9 @@
-import { lazy, Suspense, useEffect } from 'react';
+import { lazy, Suspense, useEffect, useRef } from 'react';
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { useAutoSave } from './core/hooks/useAutoSave';
 import { useAuthStore } from './core/state/auth-store';
+import { trackEvent } from './core/analytics/tracker';
 
 // Eager-load landing (first paint)
 import { LandingPage } from './pages/LandingPage';
@@ -16,7 +17,18 @@ const ProjectsPage = lazy(() => import('./pages/ProjectsPage').then((m) => ({ de
 const PricingPage = lazy(() => import('./pages/PricingPage').then((m) => ({ default: m.PricingPage })));
 const StorePage = lazy(() => import('./pages/StorePage').then((m) => ({ default: m.StorePage })));
 const AiForge = lazy(() => import('./modules/ai-forge/AiForge').then((m) => ({ default: m.AiForge })));
-
+const DashboardPage = lazy(() => import('./pages/app/dashboard-page'));
+const CreatePage = lazy(() => import('./pages/app/create-page'));
+const AccountPage = lazy(() => import('./pages/app/account-page'));
+const DiagnosticsPage = lazy(() => import('./pages/app/diagnostics-page'));
+const SettingsPage = lazy(() => import('./pages/app/settings-page'));
+const LoginPage = lazy(() => import('./pages/auth/login-page'));
+const SignupPage = lazy(() => import('./pages/auth/signup-page'));
+const ResetPasswordPage = lazy(() => import('./pages/auth/reset-password-page'));
+const GenerationPage = lazy(() => import('./pages/public/generation-page'));
+const ProfilePage = lazy(() => import('./pages/public/profile-page'));
+const ExplorePage = lazy(() => import('./pages/public/explore-page'));
+const MarketplacePage = lazy(() => import('./pages/public/marketplace-page'));
 function LoadingFallback() {
   return (
     <div className="flex items-center justify-center h-full">
@@ -41,6 +53,20 @@ function NotFoundPage() {
     </div>
   );
 }
+function ProtectedAppRoute({ children }: { children: JSX.Element }) {
+  const status = useAuthStore((s) => s.status);
+  const session = useAuthStore((s) => s.session);
+
+  if (status === 'loading') {
+    return <LoadingFallback />;
+  }
+
+  if (!session) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
+}
 
 function AppRoutes() {
   // Auto-save current project every 30s
@@ -49,6 +75,51 @@ function AppRoutes() {
   return (
     <Suspense fallback={<LoadingFallback />}>
       <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+
+        <Route
+          path="/app"
+          element={
+            <ProtectedAppRoute>
+              <DashboardPage />
+            </ProtectedAppRoute>
+          }
+        />
+        <Route
+          path="/app/create"
+          element={
+            <ProtectedAppRoute>
+              <CreatePage />
+            </ProtectedAppRoute>
+          }
+        />
+        <Route
+          path="/app/account"
+          element={
+            <ProtectedAppRoute>
+              <AccountPage />
+            </ProtectedAppRoute>
+          }
+        />
+        <Route
+          path="/app/diagnostics"
+          element={
+            <ProtectedAppRoute>
+              <DiagnosticsPage />
+            </ProtectedAppRoute>
+          }
+        />
+        <Route
+          path="/app/settings"
+          element={
+            <ProtectedAppRoute>
+              <SettingsPage />
+            </ProtectedAppRoute>
+          }
+        />
+
         <Route path="/builder" element={<AppBuilder />} />
         <Route path="/music" element={<MusicForge />} />
         <Route path="/tab" element={<TabForge />} />
@@ -63,21 +134,48 @@ function AppRoutes() {
   );
 }
 
+function PublicRoutes() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/g/:id" element={<GenerationPage />} />
+        <Route path="/u/:username" element={<ProfilePage />} />
+        <Route path="/explore" element={<ExplorePage />} />
+        <Route path="/marketplace" element={<MarketplacePage />} />
+      </Routes>
+    </Suspense>
+  );
+}
+
 export default function App() {
   const location = useLocation();
-  const isLanding = location.pathname === '/';
+  const lastTrackedPathRef = useRef<string | null>(null);
+  const isPublicStandalone =
+    location.pathname === '/' ||
+    location.pathname === '/explore' ||
+    location.pathname === '/marketplace' ||
+    location.pathname.startsWith('/g/') ||
+    location.pathname.startsWith('/u/');
   const initAuth = useAuthStore((s) => s.initialize);
 
   useEffect(() => {
     initAuth();
   }, [initAuth]);
 
-  if (isLanding) {
-    return (
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-      </Routes>
-    );
+  useEffect(() => {
+    const routeKey = `${location.pathname}${location.search}`;
+    if (lastTrackedPathRef.current === routeKey) return;
+
+    lastTrackedPathRef.current = routeKey;
+    trackEvent('page_view', {
+      pathname: location.pathname,
+      search: location.search || undefined,
+    });
+  }, [location.pathname, location.search]);
+
+  if (isPublicStandalone) {
+    return <PublicRoutes />;
   }
 
   return (
