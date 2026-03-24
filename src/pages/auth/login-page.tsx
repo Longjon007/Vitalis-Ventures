@@ -94,8 +94,9 @@ export default function LoginPage() {
             {isSubmitting ? 'Logging in…' : 'Log in'}
           </button>
         </form>
-        <div className="mt-4 text-sm text-zinc-400">
-          No account? <Link className="text-white" to="/signup">Sign up</Link>
+        <div className="mt-4 flex items-center justify-between text-sm text-zinc-400">
+          <span>No account? <Link className="text-white" to="/signup">Sign up</Link></span>
+          <Link className="text-zinc-400 hover:text-white" to="/reset-password">Forgot password?</Link>
         </div>
       </div>
     </div>

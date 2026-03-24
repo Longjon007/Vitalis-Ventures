@@ -14,6 +14,12 @@ const NAV_ITEMS = [
   { path: '/projects', label: 'Projects', icon: 'P' },
 ];
 
+const APP_ITEMS = [
+  { path: '/app', label: 'Dashboard', icon: 'D' },
+  { path: '/app/create', label: 'Create', icon: 'C' },
+  { path: '/app/account', label: 'Account', icon: 'A' },
+];
+
 const BOTTOM_ITEMS = [
   { path: '/store', label: 'Store', icon: 'S' },
   { path: '/pricing', label: 'Pricing', icon: '$' },
@@ -39,7 +45,9 @@ export function Sidebar({ onClose }: SidebarProps) {
     const isActive =
       path === '/'
         ? location.pathname === '/'
-        : location.pathname === path;
+        : path === '/app'
+          ? location.pathname === '/app'
+          : location.pathname === path || location.pathname.startsWith(path + '/');
     return (
       <button
         onClick={() => handleNav(path)}
@@ -81,6 +89,14 @@ export function Sidebar({ onClose }: SidebarProps) {
         {NAV_ITEMS.map((item) => (
           <NavButton key={item.path} {...item} />
         ))}
+        {authStatus === 'authenticated' && (
+          <>
+            <div className="my-2 mx-4 border-t border-forge-border" />
+            {APP_ITEMS.map((item) => (
+              <NavButton key={item.path} {...item} />
+            ))}
+          </>
+        )}
         <div className="my-2 mx-4 border-t border-forge-border" />
         {BOTTOM_ITEMS.map((item) => (
           <NavButton key={item.path} {...item} />
