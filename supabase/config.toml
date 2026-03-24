@@ -1,20 +1,18 @@
-[project]
-id = ""  # Fill with your Supabase project ref (e.g., "abcdefghijklmnop")
+project_id = "musicforge-tabforge"
 
 [api]
+enabled = true
 port = 54321
-schemas = ["public"]
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
 
 [auth]
+enabled = true
 site_url = "http://localhost:5173"
-additional_redirect_urls = ["http://localhost:5173/builder"]
+additional_redirect_urls = ["http://localhost:5173/builder", "https://musicforge-tabforge.vercel.app"]
 jwt_expiry = 3600
 enable_signup = true
 
 [auth.external.google]
 enabled = false
-# client_id = ""
-# secret = ""
-
-[functions]
-verify_jwt = false  # Edge functions handle their own auth

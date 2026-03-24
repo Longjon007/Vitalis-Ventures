@@ -8,7 +8,7 @@ import type { InstrumentType } from '../types/instrument';
 
 type PositionCallback = (tick: number) => void;
 
-let synths: Map<string, Tone.PolySynth> = new Map();
+let synths: Map<string, Tone.PolySynth | Tone.Sampler> = new Map();
 let samplerTracks: Set<string> = new Set(); // tracks using samplers instead of synths
 let players: Map<string, Tone.Player> = new Map();
 let effectsChains: Map<string, TrackEffectsChain> = new Map();
@@ -27,6 +27,7 @@ function getSynthForTrack(trackId: string, type: string): Tone.PolySynth | Tone.
       samplerTracks.add(trackId);
       // Wrap sampler in synths map for effects chain compatibility
       // Sampler shares the Tone.Sampler instance across tracks of same type
+      synths.set(trackId, sampler);
       return sampler;
     }
   }
@@ -131,10 +132,12 @@ export const AudioEngine = {
       const instrument = getSynthForTrack(track.id, track.instrument.type);
       instrument.volume.value = Tone.gainToDb(track.volume);
 
-      // Ensure instrument is routed to destination if not using effects
-      if (!effectsChains.has(track.id) && !samplerTracks.has(track.id)) {
-        // PolySynth — already routed in getSynthForTrack
-      } else if (samplerTracks.has(track.id)) {
+      // Ensure instrument has one clean dry route when no effects are applied.
+      if (!effectsChains.has(track.id)) {
+        try { instrument.disconnect(); } catch (e) { 
+          // May throw if already disconnected or not yet connected - safe to ignore
+          console.debug('[AudioEngine] disconnect threw (may be expected):', e);
+        }
         instrument.toDestination();
       }
 

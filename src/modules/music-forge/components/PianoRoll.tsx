@@ -28,6 +28,7 @@ interface DragState {
   originTick: number;
   originPitch: number;
   originDuration: number;
+  selectedOrigin?: Record<string, { startTick: number; pitch: number }>;
   snapshotPushed: boolean;
 }
 
@@ -267,8 +268,26 @@ export function PianoRoll({ track }: PianoRollProps) {
         }
 
         // Select note if not already selected
-        if (!selectedNoteIds.has(hit.note.id)) {
-          setSelectedNoteIds(new Set([hit.note.id]));
+        const isAlreadySelected = selectedNoteIds.has(hit.note.id);
+        const activeSelection = isAlreadySelected
+          ? new Set(selectedNoteIds)
+          : new Set([hit.note.id]);
+
+        if (!isAlreadySelected) {
+          setSelectedNoteIds(activeSelection);
+        }
+
+        const selectedOrigin: Record<string, { startTick: number; pitch: number }> = {};
+        if (!hit.isResize) {
+          for (const noteId of activeSelection) {
+            const note = track.notes.find((n) => n.id === noteId);
+            if (note) {
+              selectedOrigin[noteId] = {
+                startTick: note.startTick,
+                pitch: note.pitch,
+              };
+            }
+          }
         }
 
         const mode: InteractionMode = hit.isResize ? 'resizing' : 'dragging';
@@ -280,6 +299,7 @@ export function PianoRoll({ track }: PianoRollProps) {
           originTick: hit.note.startTick,
           originPitch: hit.note.pitch,
           originDuration: hit.note.durationTicks,
+          selectedOrigin,
           snapshotPushed: false,
         };
       } else {
@@ -322,6 +342,7 @@ export function PianoRoll({ track }: PianoRollProps) {
             originPitch: clickedPitch,
             originDuration: TICKS_PER_BEAT,
             snapshotPushed: true,
+            selectedOrigin: undefined, // Not used in creating mode, but included for type consistency
           };
         }
       }
@@ -352,28 +373,24 @@ export function PianoRoll({ track }: PianoRollProps) {
         const dy = y - drag.startY;
         const tickDelta = Math.round(dx / tickWidth / GRID_SNAP) * GRID_SNAP;
         const pitchDelta = -Math.round(dy / NOTE_HEIGHT);
-        const newTick = Math.max(0, drag.originTick + tickDelta);
-        const newPitch = Math.min(MAX_PITCH - 1, Math.max(MIN_PITCH, drag.originPitch + pitchDelta));
 
-        // Move all selected notes by same delta
-        if (selectedNoteIds.has(drag.noteId)) {
-          for (const noteId of selectedNoteIds) {
-            const note = track.notes.find((n) => n.id === noteId);
-            if (!note) continue;
-            if (noteId === drag.noteId) {
-              updateNote(track.id, noteId, { startTick: newTick, pitch: newPitch });
-            } else {
-              // Calculate relative offset from the dragged note's original position
-              const relTick = note.startTick + tickDelta;
-              const relPitch = note.pitch + pitchDelta;
-              updateNote(track.id, noteId, {
-                startTick: Math.max(0, relTick),
-                pitch: Math.min(MAX_PITCH - 1, Math.max(MIN_PITCH, relPitch)),
-              });
-            }
+        const selectedOrigin = drag.selectedOrigin ?? {};
+        const selectedIds = Object.keys(selectedOrigin);
+
+        // Move selected notes from their drag-start positions to avoid cumulative drift.
+        if (selectedIds.length > 0 && selectedOrigin[drag.noteId]) {
+          for (const noteId of selectedIds) {
+            const origin = selectedOrigin[noteId];
+            updateNote(track.id, noteId, {
+              startTick: Math.max(0, origin.startTick + tickDelta),
+              pitch: Math.min(MAX_PITCH - 1, Math.max(MIN_PITCH, origin.pitch + pitchDelta)),
+            });
           }
         } else {
-          updateNote(track.id, drag.noteId, { startTick: newTick, pitch: newPitch });
+          updateNote(track.id, drag.noteId, {
+            startTick: Math.max(0, drag.originTick + tickDelta),
+            pitch: Math.min(MAX_PITCH - 1, Math.max(MIN_PITCH, drag.originPitch + pitchDelta)),
+          });
         }
       }
 
@@ -384,7 +401,7 @@ export function PianoRoll({ track }: PianoRollProps) {
         updateNote(track.id, drag.noteId, { durationTicks: newDuration });
       }
     },
-    [getCanvasCoords, pushUndoSnapshot, selectedNoteIds, track, updateNote, tickWidth]
+    [getCanvasCoords, pushUndoSnapshot, track, updateNote, tickWidth]
   );
 
   const handleMouseUp = useCallback(() => {

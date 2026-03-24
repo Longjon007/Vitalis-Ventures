@@ -22,8 +22,19 @@ export function MusicForge() {
   const [dragOver, setDragOver] = useState(false);
 
   useEffect(() => {
-    if (project && project.tracks.length > 0 && !selectedTrackId) {
-      setSelectedTrackId(project.tracks[0].id);
+    if (!project) {
+      if (selectedTrackId !== null) {
+        setSelectedTrackId(null);
+      }
+      return;
+    }
+
+    const selectedTrackExists =
+      selectedTrackId !== null &&
+      project.tracks.some((track) => track.id === selectedTrackId);
+
+    if (!selectedTrackExists) {
+      setSelectedTrackId(project.tracks[0]?.id ?? null);
     }
   }, [project, selectedTrackId, setSelectedTrackId]);
 
@@ -45,7 +56,6 @@ export function MusicForge() {
     setDragOver(false);
 
     if (!project) return;
-    const addTrack = useProjectStore.getState().updateTrack;
     const files = Array.from(e.dataTransfer.files);
 
     for (const file of files) {
