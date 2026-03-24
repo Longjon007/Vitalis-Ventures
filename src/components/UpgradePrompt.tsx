@@ -34,16 +34,16 @@ export function UpgradePrompt({ feature, requiredTier = 'Pro', ctaPath = '/prici
   return (
     <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
       <div className="w-12 h-12 rounded-full bg-forge-accent/10 flex items-center justify-center mb-3">
-        <span className="text-forge-accent text-xl">$</span>
+        <span className="text-forge-accent text-xl">+</span>
       </div>
-      <h3 className="font-semibold text-sm mb-1">You are low on credits</h3>
+      <h3 className="font-semibold text-sm mb-1">Unlock more workspace power</h3>
       <p className="text-xs text-forge-muted mb-3 max-w-xs">
-        Upgrade to continue generating AI music tracks and keep your projects moving.
+        Upgrade for unlimited projects, full effects chain, MIDI/WAV export, and more AI generation credits.
       </p>
       <ul className="text-xs text-forge-muted space-y-1 mb-3">
-        <li>More monthly credits</li>
-        <li>Longer generation lengths</li>
-        <li>Faster workflow with fewer interruptions</li>
+        <li>Unlimited projects & tracks</li>
+        <li>Full export and effects tools</li>
+        <li>More AI generation capacity</li>
       </ul>
       <p className="text-[11px] text-forge-muted mb-4">
         Recommended for {feature}: <span className="text-forge-accent font-medium">{requiredTier}</span>

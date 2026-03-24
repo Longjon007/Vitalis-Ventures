@@ -62,7 +62,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '
 const REPLICATE_API_TOKEN = Deno.env.get('REPLICATE_API_TOKEN') ?? '';
 const REPLICATE_MODEL_VERSION =
   Deno.env.get('REPLICATE_MODEL_VERSION') ??
-  'meta/musicgen:671ac645ce5e552cc63a54a2bbff63fcf798043055d2dac5fc9e36a837eedbb';
+  'meta/musicgen:671ac645ce5e552cc63a54a2bbff63fcf798043055d2dac5fc9e36a837eedcfb';
 
 const REQUIRED_ENV_MISSING = !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY;
 

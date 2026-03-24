@@ -128,11 +128,13 @@ create index if not exists idx_ai_generations_public_created_at on public.ai_gen
 -- Profiles: users can only read/update their own profile
 alter table public.profiles enable row level security;
 
-create policy if not exists "Users can view own profile"
+drop policy if exists "Users can view own profile" on public.profiles;
+create policy "Users can view own profile"
   on public.profiles for select
   using (auth.uid() = id);
 
-create policy if not exists "Users can update own profile"
+drop policy if exists "Users can update own profile" on public.profiles;
+create policy "Users can update own profile"
   on public.profiles for update
   using (auth.uid() = id)
   with check (auth.uid() = id);
@@ -140,41 +142,49 @@ create policy if not exists "Users can update own profile"
 -- Projects: users can CRUD their own projects
 alter table public.projects enable row level security;
 
-create policy if not exists "Users can view own projects"
+drop policy if exists "Users can view own projects" on public.projects;
+create policy "Users can view own projects"
   on public.projects for select
   using (auth.uid() = user_id);
 
-create policy if not exists "Users can create own projects"
+drop policy if exists "Users can create own projects" on public.projects;
+create policy "Users can create own projects"
   on public.projects for insert
   with check (auth.uid() = user_id);
 
-create policy if not exists "Users can update own projects"
+drop policy if exists "Users can update own projects" on public.projects;
+create policy "Users can update own projects"
   on public.projects for update
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
-create policy if not exists "Users can delete own projects"
+drop policy if exists "Users can delete own projects" on public.projects;
+create policy "Users can delete own projects"
   on public.projects for delete
   using (auth.uid() = user_id);
 
 -- AI Generations: users can view/create their own
 alter table public.ai_generations enable row level security;
 
-create policy if not exists "Users can view own generations"
+drop policy if exists "Users can view own generations" on public.ai_generations;
+create policy "Users can view own generations"
   on public.ai_generations for select
   using (auth.uid() = user_id);
 
-create policy if not exists "Users can create own generations"
+drop policy if exists "Users can create own generations" on public.ai_generations;
+create policy "Users can create own generations"
   on public.ai_generations for insert
   with check (auth.uid() = user_id);
 
 -- ============================================================
 -- Updated_at triggers
 -- ============================================================
-create trigger if not exists set_profiles_updated_at
+drop trigger if exists set_profiles_updated_at on public.profiles;
+create trigger set_profiles_updated_at
   before update on public.profiles
   for each row execute function public.set_updated_at();
 
-create trigger if not exists set_projects_updated_at
+drop trigger if exists set_projects_updated_at on public.projects;
+create trigger set_projects_updated_at
   before update on public.projects
   for each row execute function public.set_updated_at();

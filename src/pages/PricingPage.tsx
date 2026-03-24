@@ -20,43 +20,43 @@ const PLANS: PlanCard[] = [
   {
     tier: 'free',
     name: 'Free',
-    descriptor: 'For exploring AI music generation',
+    descriptor: 'For exploring the workspace',
     price: '$0',
     period: 'forever',
     features: [
-      'Start with AI music generation and projects',
-      '3 generations/month (up to 15s each)',
-      'Up to 2 projects and 4 tracks per project',
-      'Core creation tools and templates',
+      'Import audio & MIDI files',
+      'Basic piano roll & tab editor',
+      'Up to 2 projects, 4 tracks each',
+      '3 AI generations/month included',
     ],
   },
   {
     tier: 'pro',
     name: 'Pro',
-    descriptor: 'For consistent weekly creation',
+    descriptor: 'For serious music creators',
     price: '$9',
     period: '/month',
     highlighted: true,
     features: [
       'Everything in Free',
-      '50 generations/month (up to 2 min each)',
       'Unlimited projects & tracks',
-      'Advanced creation tools and exports',
-      'Best value for active creators',
+      'Full effects chain, mixer, and exports',
+      '50 AI generations/month included',
+      'MIDI & WAV export, all instruments',
     ],
   },
   {
     tier: 'studio',
     name: 'Studio',
-    descriptor: 'For power users and heavy output',
+    descriptor: 'For professional workflows',
     price: '$19',
     period: '/month',
     features: [
       'Everything in Pro',
-      'Unlimited generations (up to 5 min each)',
-      'Maximum monthly creation capacity',
+      'Collaboration & sharing',
+      'Unlimited AI generations included',
+      'AI stem separation & suggestions',
       'Priority support',
-      'Built for high-volume workflows',
     ],
   },
 ];
@@ -141,9 +141,9 @@ export function PricingPage() {
   return (
     <div className="flex flex-col h-full overflow-auto">
       <div className="px-6 py-4 border-b border-forge-border bg-forge-surface shrink-0">
-        <h2 className="text-lg font-semibold">Simple Pricing For Creators</h2>
+        <h2 className="text-lg font-semibold">Plans for Every Creator</h2>
         <p className="text-xs text-forge-muted mt-1">
-          Pay for what you generate with monthly credits. Upgrade when you need more creation capacity.
+          Every plan includes the full workspace. Upgrade for more tools, exports, and AI generation.
         </p>
         <p className="text-xs text-forge-muted mt-2">
           Current plan:{' '}
@@ -162,8 +162,9 @@ export function PricingPage() {
         {isSyncing && <p className="mb-3 text-xs text-forge-muted">Refreshing subscription status…</p>}
 
         <div className="mb-6 max-w-4xl mx-auto rounded-xl border border-forge-border bg-forge-surface p-4">
-          <h3 className="text-sm font-semibold text-white">How credits work</h3>
+          <h3 className="text-sm font-semibold text-white">How AI credits work</h3>
           <ul className="mt-2 space-y-1 text-xs text-forge-muted">
+            <li>All plans include workspace tools (import, edit, arrange) with no credit cost. Credits are only used for AI generation.</li>
             <li>Each generation request currently uses 5 credits.</li>
             <li>Credits reset monthly based on your plan.</li>
             <li>You can upgrade any time from this page or your account billing controls.</li>
@@ -236,6 +237,7 @@ export function PricingPage() {
           <h3 className="text-sm font-semibold text-white">Credit Packs (Rolling Out)</h3>
           <p className="mt-1 text-xs text-forge-muted">
             Need extra capacity mid-cycle? One-time credit packs are coming soon.
+            Credits are for AI generation only. Import, editing, and workspace tools are unlimited on all plans.
           </p>
           <div className="mt-3 flex flex-wrap gap-3">
             <Button variant="secondary" onClick={() => handleCreditPackChoice('pack_25', 1200)}>

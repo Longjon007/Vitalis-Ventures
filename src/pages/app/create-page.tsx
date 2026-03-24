@@ -1,7 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ShareModal } from '../../components/ShareModal';
 import { UpgradePrompt } from '../../components/UpgradePrompt';
+import { importAudioFile, importAudioFromUrl, isAudioFile, isMidiFile } from '../../core/import/audio-file-import';
+import { importMidiFile } from '../../core/import/midi-importer';
+import { useProjectStore } from '../../core/state/project-store';
+import { useAuthStore } from '../../core/state/auth-store';
 import { getErrorMessage } from '../../core/utils/errors';
 import { trackEvent } from '../../core/analytics/tracker';
 import {
@@ -100,9 +104,110 @@ function toStringValue(value: unknown, fallback: string): string {
   return fallback;
 }
 
+type CreateTab = 'upload' | 'url' | 'generate';
+
 export default function CreatePage() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const isMountedRef = useRef(true);
+  const session = useAuthStore((s) => s.session);
+
+  const [createTab, setCreateTab] = useState<CreateTab>('upload');
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
+  const [urlInput, setUrlInput] = useState('');
+  const [isImportingUrl, setIsImportingUrl] = useState(false);
+  const [urlImportError, setUrlImportError] = useState<string | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  function addImportedTrack(track: import('../../core/types/project').Track) {
+    useProjectStore.setState((state) => {
+      if (!state.project) return state;
+      return {
+        project: {
+          ...state.project,
+          updatedAt: Date.now(),
+          tracks: [...state.project.tracks, track],
+        },
+      };
+    });
+  }
+
+  const handleFileUpload = useCallback(async (files: FileList | File[]) => {
+    setUploadError(null);
+    setUploadSuccess(null);
+    const fileArray = Array.from(files);
+    if (fileArray.length === 0) return;
+
+    // Auto-create a project if none exists
+    const project = useProjectStore.getState().project;
+    if (!project) {
+      useProjectStore.getState().createProject({
+        name: 'New Project',
+        tempo: 120,
+        timeSignature: [4, 4],
+        key: 'C',
+        tracks: [],
+      });
+    }
+
+    let imported = 0;
+    for (const file of fileArray) {
+      try {
+        if (isAudioFile(file)) {
+          const track = await importAudioFile(file);
+          addImportedTrack(track);
+          imported++;
+        } else if (isMidiFile(file)) {
+          const result = await importMidiFile(file);
+          for (const track of result.tracks) addImportedTrack(track);
+          imported += result.tracks.length;
+        } else {
+          setUploadError(`Unsupported file: ${file.name}. Use .wav, .mp3, .ogg, .webm, or .mid files.`);
+        }
+      } catch (err) {
+        setUploadError(getErrorMessage(err, `Failed to import ${file.name}.`));
+      }
+    }
+    if (imported > 0) {
+      trackEvent('page_view', { pathname: '/app/create', search: `?imported=${imported}` });
+      setUploadSuccess(`Imported ${imported} track${imported > 1 ? 's' : ''}. Opening workspace...`);
+      setTimeout(() => navigate('/music'), 600);
+    }
+  }, [navigate]);
+
+  const handleUrlImport = useCallback(async () => {
+    const trimmed = urlInput.trim();
+    if (!trimmed) { setUrlImportError('Please enter a URL.'); return; }
+    if (!trimmed.startsWith('https://')) { setUrlImportError('URL must start with https://'); return; }
+    if (!session?.access_token) { setUrlImportError('You must be logged in to import.'); return; }
+
+    setIsImportingUrl(true);
+    setUrlImportError(null);
+
+    // Auto-create a project if none exists
+    const project = useProjectStore.getState().project;
+    if (!project) {
+      useProjectStore.getState().createProject({
+        name: 'New Project',
+        tempo: 120,
+        timeSignature: [4, 4],
+        key: 'C',
+        tracks: [],
+      });
+    }
+
+    try {
+      const track = await importAudioFromUrl(trimmed, session.access_token);
+      addImportedTrack(track);
+      trackEvent('page_view', { pathname: '/app/create', search: '?imported=url' });
+      navigate('/music');
+    } catch (err) {
+      setUrlImportError(getErrorMessage(err, 'Failed to import audio from URL.'));
+    } finally {
+      setIsImportingUrl(false);
+    }
+  }, [urlInput, session, navigate]);
   const generationStatusMapRef = useRef<Record<string, string>>({});
   const hasHydratedGenerationStatusRef = useRef(false);
   const hasTrackedLowCreditsRef = useRef(false);
@@ -737,21 +842,125 @@ export default function CreatePage() {
         <div>
           <h1 className="text-3xl font-semibold text-white">Create</h1>
           <p className="mt-2 text-sm text-zinc-400">
-            Generate AI music tracks, manage outputs, and keep your projects moving.
+            Import audio, paste a URL, or generate with AI — then edit in the workspace.
           </p>
         </div>
 
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3">
-          <div className="text-xs uppercase tracking-wide text-zinc-500">Remaining credits</div>
-          <div className="mt-1 text-2xl font-semibold text-white">{remainingCredits}</div>
-          <p className="mt-1 text-xs text-zinc-400">You have {remainingCredits} credits remaining.</p>
-          {isUrgentCredits && (
-            <p className="mt-1 text-xs text-amber-300">Only {remainingCredits} credits left.</p>
-          )}
-        </div>
+        {createTab === 'generate' && (
+          <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3">
+            <div className="text-xs uppercase tracking-wide text-zinc-500">Remaining credits</div>
+            <div className="mt-1 text-2xl font-semibold text-white">{remainingCredits}</div>
+            <p className="mt-1 text-xs text-zinc-400">You have {remainingCredits} credits remaining.</p>
+            {isUrgentCredits && (
+              <p className="mt-1 text-xs text-amber-300">Only {remainingCredits} credits left.</p>
+            )}
+          </div>
+        )}
       </div>
 
-      {recentProject && (
+      {/* Tab bar */}
+      <div className="flex gap-2">
+        {([
+          { key: 'upload' as CreateTab, label: 'Upload Audio' },
+          { key: 'url' as CreateTab, label: 'Import URL' },
+          { key: 'generate' as CreateTab, label: 'Generate with AI' },
+        ]).map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setCreateTab(tab.key)}
+            className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
+              createTab === tab.key
+                ? 'border-forge-accent bg-forge-accent/10 text-forge-accent'
+                : 'border-zinc-700 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Upload Audio tab */}
+      {createTab === 'upload' && (
+        <section className="rounded-2xl border border-zinc-800 bg-zinc-950 p-6">
+          <h2 className="text-lg font-medium text-white">Upload audio or MIDI files</h2>
+          <p className="mt-1 text-sm text-zinc-400">
+            Drag and drop files here, or click to browse. Supports .wav, .mp3, .ogg, .webm, and .mid files.
+          </p>
+          <div
+            className={`mt-4 flex min-h-[200px] cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed transition-colors ${
+              isDragOver
+                ? 'border-forge-accent bg-forge-accent/5'
+                : 'border-zinc-700 hover:border-zinc-500'
+            }`}
+            onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+            onDragLeave={() => setIsDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setIsDragOver(false);
+              void handleFileUpload(e.dataTransfer.files);
+            }}
+            onClick={() => {
+              const input = document.createElement('input');
+              input.type = 'file';
+              input.multiple = true;
+              input.accept = '.wav,.mp3,.ogg,.webm,.mid,.midi';
+              input.onchange = () => { if (input.files) void handleFileUpload(input.files); };
+              input.click();
+            }}
+          >
+            <div className="text-4xl text-zinc-600 mb-3">+</div>
+            <p className="text-sm text-zinc-400">
+              {isDragOver ? 'Drop files here' : 'Click to browse or drag files here'}
+            </p>
+            <p className="mt-1 text-xs text-zinc-500">WAV, MP3, OGG, WebM, MIDI</p>
+          </div>
+          {uploadError && (
+            <p className="mt-3 text-sm text-red-300">{uploadError}</p>
+          )}
+          {uploadSuccess && (
+            <p className="mt-3 text-sm text-emerald-300">{uploadSuccess}</p>
+          )}
+        </section>
+      )}
+
+      {/* Import URL tab */}
+      {createTab === 'url' && (
+        <section className="rounded-2xl border border-zinc-800 bg-zinc-950 p-6">
+          <h2 className="text-lg font-medium text-white">Import from URL</h2>
+          <p className="mt-1 text-sm text-zinc-400">
+            Paste a link to audio from Suno, Udio, or any direct audio file URL.
+          </p>
+          <div className="mt-4 flex gap-3">
+            <input
+              className="flex-1 rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-2.5 text-sm text-white placeholder:text-zinc-500 focus:border-forge-accent focus:outline-none"
+              placeholder="https://suno.com/song/... or direct .mp3 link"
+              value={urlInput}
+              onChange={(e) => { setUrlInput(e.target.value); setUrlImportError(null); }}
+              onKeyDown={(e) => { if (e.key === 'Enter') void handleUrlImport(); }}
+            />
+            <button
+              className="rounded-xl bg-forge-accent px-5 py-2.5 text-sm font-medium text-white hover:bg-forge-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isImportingUrl || !urlInput.trim()}
+              onClick={() => void handleUrlImport()}
+            >
+              {isImportingUrl ? 'Importing...' : 'Import'}
+            </button>
+          </div>
+          {urlImportError && (
+            <p className="mt-3 text-sm text-red-300">{urlImportError}</p>
+          )}
+          <div className="mt-4 flex flex-wrap gap-2">
+            <span className="rounded-full border border-zinc-700 px-3 py-1 text-xs text-zinc-400">Suno</span>
+            <span className="rounded-full border border-zinc-700 px-3 py-1 text-xs text-zinc-400">Udio</span>
+            <span className="rounded-full border border-zinc-700 px-3 py-1 text-xs text-zinc-400">Direct audio links</span>
+          </div>
+          <p className="mt-3 text-xs text-zinc-500">
+            Can't import from a URL? Download the file first, then use the Upload tab.
+          </p>
+        </section>
+      )}
+
+      {createTab === 'generate' && recentProject && (
         <section className="rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm text-zinc-300">
@@ -769,9 +978,9 @@ export default function CreatePage() {
         </section>
       )}
 
-      {isLowCredits && <UpgradePrompt feature="AI music generation" />}
+      {createTab === 'generate' && isLowCredits && <UpgradePrompt feature="AI music generation" />}
 
-      {(error || success || pollingNotice) && (
+      {createTab === 'generate' && (error || success || pollingNotice) && (
         <div className="space-y-2">
           {error && (
             <div className="rounded-lg border border-red-900 bg-red-950/40 px-4 py-3 text-sm text-red-300">
@@ -819,6 +1028,7 @@ export default function CreatePage() {
         </div>
       )}
 
+      {createTab === 'generate' && (<>
       <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
         <section className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5">
           <h2 className="text-lg font-medium text-white">New generation</h2>
@@ -1188,6 +1398,7 @@ export default function CreatePage() {
         audioUrl={toSafeAudioUrl(shareGeneration?.output_url ?? null)}
         onShared={handleShareAction}
       />
+      </>)}
     </div>
   );
 }

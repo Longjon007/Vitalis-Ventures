@@ -133,6 +133,7 @@ $$;
 
 grant execute on function public.create_marketplace_listing(uuid, integer) to authenticated;
 
+drop function if exists public.list_marketplace_listings(integer, integer);
 create or replace function public.list_marketplace_listings(
   p_limit integer default 24,
   p_offset integer default 0

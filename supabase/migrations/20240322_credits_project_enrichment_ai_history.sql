@@ -100,54 +100,65 @@ alter table public.project_assets enable row level security;
 -- ============================================================
 
 -- Credit Wallets: users manage own wallet
-create policy if not exists "Users can view own credit wallet"
+drop policy if exists "Users can view own credit wallet" on public.credit_wallets;
+create policy "Users can view own credit wallet"
   on public.credit_wallets for select
   using (auth.uid() = user_id);
 
-create policy if not exists "Users can insert own credit wallet"
+drop policy if exists "Users can insert own credit wallet" on public.credit_wallets;
+create policy "Users can insert own credit wallet"
   on public.credit_wallets for insert
   with check (auth.uid() = user_id);
 
-create policy if not exists "Users can update own credit wallet"
+drop policy if exists "Users can update own credit wallet" on public.credit_wallets;
+create policy "Users can update own credit wallet"
   on public.credit_wallets for update
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
 -- Credit Events: users view/insert own events
-create policy if not exists "Users can view own credit events"
+drop policy if exists "Users can view own credit events" on public.credit_events;
+create policy "Users can view own credit events"
   on public.credit_events for select
   using (auth.uid() = user_id);
 
-create policy if not exists "Users can insert own credit events"
+drop policy if exists "Users can insert own credit events" on public.credit_events;
+create policy "Users can insert own credit events"
   on public.credit_events for insert
   with check (auth.uid() = user_id);
 
 -- Project Assets: users manage own assets
-create policy if not exists "Users can view own project assets"
+drop policy if exists "Users can view own project assets" on public.project_assets;
+create policy "Users can view own project assets"
   on public.project_assets for select
   using (auth.uid() = user_id);
 
-create policy if not exists "Users can insert own project assets"
+drop policy if exists "Users can insert own project assets" on public.project_assets;
+create policy "Users can insert own project assets"
   on public.project_assets for insert
   with check (auth.uid() = user_id);
 
-create policy if not exists "Users can update own project assets"
+drop policy if exists "Users can update own project assets" on public.project_assets;
+create policy "Users can update own project assets"
   on public.project_assets for update
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
-create policy if not exists "Users can delete own project assets"
+drop policy if exists "Users can delete own project assets" on public.project_assets;
+create policy "Users can delete own project assets"
   on public.project_assets for delete
   using (auth.uid() = user_id);
 
 -- ============================================================
 -- Updated_at triggers
 -- ============================================================
-create trigger if not exists set_credit_wallets_updated_at
+drop trigger if exists set_credit_wallets_updated_at on public.credit_wallets;
+create trigger set_credit_wallets_updated_at
   before update on public.credit_wallets
   for each row execute function public.set_updated_at();
 
-create trigger if not exists set_ai_generations_updated_at
+drop trigger if exists set_ai_generations_updated_at on public.ai_generations;
+create trigger set_ai_generations_updated_at
   before update on public.ai_generations
   for each row execute function public.set_updated_at();
 

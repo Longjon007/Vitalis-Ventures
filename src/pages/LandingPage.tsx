@@ -3,54 +3,54 @@ import { Button } from '../components/Button';
 
 const FEATURES = [
   {
-    title: 'Generate Faster',
+    title: 'Import From Anywhere',
     description:
-      'Create AI music tracks in seconds so you can move from idea to draft without breaking your flow.',
-    icon: 'S',
+      'Drag-drop audio files, paste Suno or Udio links, or import MIDI to start editing instantly.',
+    icon: 'I',
     color: '#6c5ce7',
-    highlights: ['Prompt-based generation', 'Quick status updates', 'Designed for rapid iteration'],
+    highlights: ['Drag-drop audio & MIDI', 'Paste Suno or Udio links', 'WAV, MP3, OGG, WebM support'],
   },
   {
-    title: 'Control the Output',
+    title: 'Full DAW Workspace',
     description:
-      'Shape each generation with prompt details and parameters like genre, BPM, key signature, mode, and duration.',
-    icon: 'C',
+      'Edit with a piano roll, tab editor, drum sequencer, mixer, and effects chain — all in the browser.',
+    icon: 'W',
     color: '#00b894',
-    highlights: ['Prompt + parameters', 'Multiple generation modes', 'Credits-aware workflow'],
+    highlights: ['Piano roll & tab editor', 'Drum sequencer & mixer', 'Effects chain & automation'],
   },
   {
     title: 'Stay Organized',
     description:
-      'Keep your AI music work in one place with projects and generation history you can revisit and reuse.',
+      'Keep all your music in one place with cloud-synced projects, version history, and real-time collaboration.',
     icon: 'O',
     color: '#e17055',
-    highlights: ['Project-based workflow', 'Generation history', 'Clear status visibility'],
+    highlights: ['Cloud-synced projects', 'Version history', 'Real-time collaboration'],
   },
   {
-    title: 'Built to Monetize',
+    title: 'AI-Powered Tools',
     description:
-      'Move from free exploration to paid creation smoothly with credits, subscriptions, and billing controls in-app.',
-    icon: '$',
+      'AI music generation is available when you need it — plus smart suggestions to speed up your workflow.',
+    icon: 'A',
     color: '#d4a853',
-    highlights: ['Stripe subscriptions', 'Credits reset monthly', 'Upgrade any time'],
+    highlights: ['AI music generation', 'Smart suggestions', 'Multiple AI models'],
   },
 ];
 
 const STEPS = [
   {
     number: '01',
-    title: 'Write a Prompt',
-    description: 'Describe the style, mood, and energy for the track you want to generate.',
+    title: 'Import or Create',
+    description: 'Upload audio files, paste a Suno or Udio link, import MIDI, or start from scratch.',
   },
   {
     number: '02',
-    title: 'Generate a Track',
-    description: 'Run AI generation with your settings and watch status update in real time.',
+    title: 'Edit & Arrange',
+    description: 'Shape your tracks with the piano roll, tab editor, drum patterns, mixer, and effects chain.',
   },
   {
     number: '03',
-    title: 'Save to Projects',
-    description: 'Keep your generated tracks organized in projects and revisit them anytime.',
+    title: 'Export & Share',
+    description: 'Export to WAV or MIDI, share publicly, collaborate with others, or list on the marketplace.',
   },
 ];
 
@@ -90,7 +90,7 @@ export function LandingPage() {
             <span className="font-bold text-lg bg-gradient-to-r from-[#d4a853] to-[#b8860b] bg-clip-text text-transparent">
               MusicForge
             </span>
-            <span className="text-forge-muted text-xs ml-2">AI Music Creation Workspace</span>
+            <span className="text-forge-muted text-xs ml-2">Music Creation Workspace</span>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -103,8 +103,8 @@ export function LandingPage() {
           <Button variant="ghost" size="sm" onClick={() => navigate('/login')}>
             Log In
           </Button>
-          <Button size="sm" onClick={() => navigate('/signup')}>
-            Start Creating Free
+          <Button size="sm" onClick={() => navigate('/builder')}>
+            Open Workspace
           </Button>
         </div>
       </nav>
@@ -122,18 +122,18 @@ export function LandingPage() {
 
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight mb-6">
             <span className="bg-gradient-to-r from-[#d4a853] via-forge-accent to-forge-success bg-clip-text text-transparent">
-              Create original AI music tracks faster
+              Your music workspace. Import, edit, and create.
             </span>
           </h1>
 
           <p className="text-lg sm:text-xl text-forge-muted max-w-2xl mx-auto mb-10 leading-relaxed">
-            Generate tracks, manage projects, and track generation history in one workspace.
-            Start free with monthly credits and upgrade when you need more creation capacity.
+            Import audio from anywhere — Suno, Udio, your DAW, or record live. Edit with a full
+            piano roll, tab editor, and mixer. AI generation included when you need it.
           </p>
 
           <div className="flex items-center justify-center gap-4 flex-wrap">
-            <Button size="lg" onClick={() => navigate('/signup')}>
-              Start Creating Free
+            <Button size="lg" onClick={() => navigate('/builder')}>
+              Open Workspace
             </Button>
             <Button variant="secondary" size="lg" onClick={() => navigate('/pricing')}>
               View Plans
@@ -153,7 +153,7 @@ export function LandingPage() {
         <div className="text-center mb-14">
           <h2 className="text-3xl sm:text-4xl font-bold mb-3">Why creators use MusicForge</h2>
           <p className="text-forge-muted text-lg max-w-xl mx-auto">
-            Everything needed to move from idea to generated track without losing momentum.
+            Everything needed to import, edit, and create music without losing momentum.
           </p>
         </div>
 
@@ -189,7 +189,7 @@ export function LandingPage() {
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-14">
             <h2 className="text-3xl sm:text-4xl font-bold mb-3">How It Works</h2>
-            <p className="text-forge-muted text-lg">From prompt to project in three steps.</p>
+            <p className="text-forge-muted text-lg">From import to export in three steps.</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
@@ -227,13 +227,13 @@ export function LandingPage() {
       {/* CTA */}
       <section className="px-6 py-20">
         <div className="max-w-3xl mx-auto text-center bg-gradient-to-br from-[#d4a853]/10 to-forge-accent/5 border border-forge-border rounded-2xl p-10">
-          <h2 className="text-2xl sm:text-3xl font-bold mb-3">Start creating AI music for free</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold mb-3">Start creating music for free</h2>
           <p className="text-forge-muted mb-6">
             Free plan includes monthly credits so you can generate tracks, build projects, and upgrade anytime.
           </p>
           <div className="flex items-center justify-center gap-4">
-            <Button size="lg" onClick={() => navigate('/signup')}>
-              Generate Your First Track
+            <Button size="lg" onClick={() => navigate('/builder')}>
+              Open Workspace Free
             </Button>
             <Button variant="secondary" size="lg" onClick={() => navigate('/pricing')}>
               View Plans
@@ -250,7 +250,7 @@ export function LandingPage() {
             <span className="text-sm bg-gradient-to-r from-[#d4a853] to-[#b8860b] bg-clip-text text-transparent font-semibold">
               MusicForge
             </span>
-            <span className="text-xs text-forge-muted">| AI music generation workspace</span>
+            <span className="text-xs text-forge-muted">| Music creation workspace</span>
           </div>
           <div className="flex items-center gap-4 text-xs text-forge-muted">
             <button onClick={() => navigate('/pricing')} className="hover:text-forge-text transition-colors">
