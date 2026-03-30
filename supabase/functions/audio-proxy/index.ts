@@ -129,31 +129,36 @@ Deno.serve(async (req: Request) => {
   }
 
   if (req.method !== 'POST') {
-    return errorResponse(405, 'Method not allowed.', corsHeaders, requestId);
+    return errorResponse(405, 'Method not allowed.', corsHeaders, { requestId });
   }
 
   // Check origin
   if (!isOriginAllowed(req, allowedOrigins)) {
     safeLogWarn('audio-proxy.cors_rejected', { requestId });
-    return errorResponse(403, 'Origin not allowed.', corsHeaders, requestId);
+    return errorResponse(403, 'Origin not allowed.', corsHeaders, { requestId });
   }
 
   // Check env
   if (REQUIRED_ENV_MISSING) {
-    return errorResponse(503, 'Service not configured.', corsHeaders, requestId);
+    return errorResponse(503, 'Service not configured.', corsHeaders, { requestId });
   }
 
   // Authenticate
   const userId = await getAuthenticatedUserId(req);
   if (!userId) {
     safeLogWarn('audio-proxy.missing_auth', { requestId });
-    return errorResponse(401, 'Authentication required.', corsHeaders, requestId);
+    return errorResponse(401, 'Authentication required.', corsHeaders, { requestId });
   }
 
   // Rate limit: 30 per user per hour
-  const userLimit = applyRateLimit(`audio-proxy:user:${userId}`, 30, 3600);
+  const userLimit = applyRateLimit({
+    namespace: 'audio-proxy:user',
+    identifier: userId,
+    limit: 30,
+    windowMs: 3600 * 1000,
+  });
   if (!userLimit.allowed) {
-    return errorResponse(429, 'Too many import requests. Try again later.', { ...corsHeaders, ...userLimit.headers }, requestId);
+    return errorResponse(429, 'Too many import requests. Try again later.', { ...corsHeaders, ...userLimit.headers }, { requestId });
   }
 
   // Parse body
@@ -161,12 +166,12 @@ Deno.serve(async (req: Request) => {
   try {
     body = await req.json();
   } catch {
-    return errorResponse(400, 'Invalid JSON body.', corsHeaders, requestId);
+    return errorResponse(400, 'Invalid JSON body.', corsHeaders, { requestId });
   }
 
   const url = normalizeString(body.url as string);
   if (!url) {
-    return errorResponse(400, 'URL is required.', corsHeaders, requestId);
+    return errorResponse(400, 'URL is required.', corsHeaders, { requestId });
   }
 
   // Validate URL
@@ -174,15 +179,15 @@ Deno.serve(async (req: Request) => {
   try {
     parsed = new URL(url);
   } catch {
-    return errorResponse(400, 'Invalid URL format.', corsHeaders, requestId);
+    return errorResponse(400, 'Invalid URL format.', corsHeaders, { requestId });
   }
 
   if (parsed.protocol !== 'https:') {
-    return errorResponse(400, 'Only HTTPS URLs are supported.', corsHeaders, requestId);
+    return errorResponse(400, 'Only HTTPS URLs are supported.', corsHeaders, { requestId });
   }
 
   if (isBlockedHost(parsed.hostname)) {
-    return errorResponse(400, 'This host is not allowed.', corsHeaders, requestId);
+    return errorResponse(400, 'This host is not allowed.', corsHeaders, { requestId });
   }
 
   safeLogInfo('audio-proxy.start', { requestId, url: parsed.hostname + parsed.pathname });
@@ -198,7 +203,7 @@ Deno.serve(async (req: Request) => {
         422,
         'Could not extract audio from this URL. Try downloading the file first and uploading it directly.',
         corsHeaders,
-        requestId,
+        { requestId },
       );
     }
     audioUrl = resolved;
@@ -220,13 +225,13 @@ Deno.serve(async (req: Request) => {
     });
 
     if (!audioRes.ok) {
-      return errorResponse(502, `Audio source returned ${audioRes.status}.`, corsHeaders, requestId);
+      return errorResponse(502, `Audio source returned ${audioRes.status}.`, corsHeaders, { requestId });
     }
 
     // Check content length
     const contentLength = audioRes.headers.get('content-length');
     if (contentLength && parseInt(contentLength, 10) > MAX_FILE_BYTES) {
-      return errorResponse(413, 'Audio file is too large (max 50MB).', corsHeaders, requestId);
+      return errorResponse(413, 'Audio file is too large (max 50MB).', corsHeaders, { requestId });
     }
 
     // Determine content type
@@ -246,10 +251,10 @@ Deno.serve(async (req: Request) => {
     });
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError') {
-      return errorResponse(504, 'Audio fetch timed out.', corsHeaders, requestId);
+      return errorResponse(504, 'Audio fetch timed out.', corsHeaders, { requestId });
     }
     safeLogWarn('audio-proxy.fetch_error', { requestId, error: String(err) });
-    return errorResponse(502, 'Failed to fetch audio from source.', corsHeaders, requestId);
+    return errorResponse(502, 'Failed to fetch audio from source.', corsHeaders, { requestId });
   } finally {
     clearTimeout(timeout);
   }
