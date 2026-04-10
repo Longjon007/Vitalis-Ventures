@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useRef } from 'react';
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import { Layout } from './components/Layout';
 import { useAutoSave } from './core/hooks/useAutoSave';
 import { useAuthStore } from './core/state/auth-store';
@@ -136,15 +137,18 @@ function AppRoutes() {
 
 function PublicRoutes() {
   return (
-    <Suspense fallback={<LoadingFallback />}>
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/g/:id" element={<GenerationPage />} />
-        <Route path="/u/:username" element={<ProfilePage />} />
-        <Route path="/explore" element={<ExplorePage />} />
-        <Route path="/marketplace" element={<MarketplacePage />} />
-      </Routes>
-    </Suspense>
+    <>
+      <Suspense fallback={<LoadingFallback />}>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/g/:id" element={<GenerationPage />} />
+          <Route path="/u/:username" element={<ProfilePage />} />
+          <Route path="/explore" element={<ExplorePage />} />
+          <Route path="/marketplace" element={<MarketplacePage />} />
+        </Routes>
+      </Suspense>
+      <SpeedInsights />
+    </>
   );
 }
 
@@ -179,8 +183,11 @@ export default function App() {
   }
 
   return (
-    <Layout>
-      <AppRoutes />
-    </Layout>
+    <>
+      <Layout>
+        <AppRoutes />
+      </Layout>
+      <SpeedInsights />
+    </>
   );
 }
